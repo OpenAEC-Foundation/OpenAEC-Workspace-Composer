@@ -19,10 +19,12 @@ export function PresetSelector(props: Props) {
               style={{ "--preset-color": preset.color }}
               onClick={() => props.onSelect(preset)}
             >
-              <span class="preset-indicator" />
               <div class="preset-info">
                 <strong>{preset.name}</strong>
                 <small>{preset.description}</small>
+                <small class="font-mono text-accent" style={{ "margin-top": "4px" }}>
+                  {preset.packages.length} packages
+                </small>
               </div>
             </button>
           )}

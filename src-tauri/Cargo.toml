@@ -1,0 +1,20 @@
+[package]
+name = "openaec-workspace-composer"
+version = "1.0.0"
+description = "Compose Claude Code workspaces with skill packages"
+authors = ["OpenAEC Foundation"]
+edition = "2021"
+
+[lib]
+name = "openaec_workspace_composer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -1,0 +1,28 @@
+{
+  "name": "openaec-workspace-composer",
+  "version": "1.0.0",
+  "description": "Compose Claude Code workspaces with skill packages — OpenAEC Foundation",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "keywords": ["claude", "workspace", "skill-packages", "openaec", "tauri", "solidjs"],
+  "author": "OpenAEC Foundation",
+  "license": "MIT",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.1",
+    "vite-plugin-solid": "^2.11.11"
+  },
+  "dependencies": {
+    "@solidjs/router": "^0.15.3",
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.2.2",
+    "@tauri-apps/plugin-shell": "^2.2.1",
+    "solid-js": "^1.9.7"
+  }
+}

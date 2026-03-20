@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/v2/crates/tauri-cli/schema.json",
+  "productName": "OpenAEC Workspace Composer",
+  "version": "1.0.0",
+  "identifier": "com.openaec.workspace-composer",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "title": "OpenAEC Workspace Composer",
+    "windows": [
+      {
+        "title": "OpenAEC Workspace Composer",
+        "width": 1100,
+        "height": 750,
+        "resizable": true,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "dialog": {},
+    "shell": {
+      "open": true
+    }
+  }
+}

@@ -449,6 +449,79 @@ function SyncSessionManager() {
   );
 }
 
+function SetupGuide() {
+  const [expanded, setExpanded] = createSignal(false);
+
+  return (
+    <Show when={!gpuStore.connected()}>
+      <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
+        <h2
+          class="card-title"
+          style={{ cursor: "pointer" }}
+          onClick={() => setExpanded(!expanded())}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          Setup Guide
+          <span class="text-muted" style={{ "font-size": "0.75rem", "margin-left": "auto" }}>
+            {expanded() ? "collapse" : "expand"}
+          </span>
+        </h2>
+
+        <Show when={expanded()}>
+          <div style={{ "font-size": "0.85rem", "line-height": "1.6" }}>
+            <div style={{ "margin-bottom": "var(--sp-3)" }}>
+              <strong style={{ color: "var(--accent)" }}>1. Generate an SSH key</strong>
+              <p class="text-dim">If you don't have one yet, run in your terminal:</p>
+              <code class="font-mono" style={{ display: "block", background: "var(--bg-input)", padding: "var(--sp-2)", "border-radius": "var(--radius)", "margin-top": "var(--sp-1)", color: "var(--accent)", "font-size": "0.8rem" }}>
+                ssh-keygen -t ed25519 -C "your@email.com"
+              </code>
+            </div>
+
+            <div style={{ "margin-bottom": "var(--sp-3)" }}>
+              <strong style={{ color: "var(--accent)" }}>2. Copy your public key to the server</strong>
+              <p class="text-dim">Ask your admin to add your key, or if you have access:</p>
+              <code class="font-mono" style={{ display: "block", background: "var(--bg-input)", padding: "var(--sp-2)", "border-radius": "var(--radius)", "margin-top": "var(--sp-1)", color: "var(--accent)", "font-size": "0.8rem" }}>
+                ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
+              </code>
+            </div>
+
+            <div style={{ "margin-bottom": "var(--sp-3)" }}>
+              <strong style={{ color: "var(--accent)" }}>3. Add SSH config alias (optional)</strong>
+              <p class="text-dim">Add to <code class="font-mono">~/.ssh/config</code>:</p>
+              <pre class="font-mono" style={{ background: "var(--bg-input)", padding: "var(--sp-2)", "border-radius": "var(--radius)", "margin-top": "var(--sp-1)", color: "var(--text-dim)", "font-size": "0.8rem", "white-space": "pre-wrap" }}>
+{`Host my-gpu-server
+    HostName 144.76.60.210
+    User your-username
+    IdentityFile ~/.ssh/id_ed25519`}
+              </pre>
+            </div>
+
+            <div style={{ "margin-bottom": "var(--sp-3)" }}>
+              <strong style={{ color: "var(--accent)" }}>4. Install Mutagen (for folder sync)</strong>
+              <p class="text-dim">Required for bidirectional folder synchronization:</p>
+              <code class="font-mono" style={{ display: "block", background: "var(--bg-input)", padding: "var(--sp-2)", "border-radius": "var(--radius)", "margin-top": "var(--sp-1)", color: "var(--accent)", "font-size": "0.8rem" }}>
+                winget install mutagen-io.Mutagen
+              </code>
+            </div>
+
+            <div>
+              <strong style={{ color: "var(--accent)" }}>5. Fill in the form above</strong>
+              <p class="text-dim">
+                Enter your server details and click "Test Connection". If using an SSH config alias,
+                you only need to fill in the alias field — host, port and key are read from your config.
+              </p>
+            </div>
+          </div>
+        </Show>
+      </div>
+    </Show>
+  );
+}
+
 export function GpuServerPage() {
   onMount(async () => {
     await gpuStore.loadConfig();
@@ -468,6 +541,7 @@ export function GpuServerPage() {
     <div class="content-body">
       <div class="content-scroll">
         <ConnectionConfig />
+        <SetupGuide />
         <div style={{ "margin-top": "var(--sp-4)" }}>
           <ServerStatusPanel />
         </div>

@@ -1,6 +1,8 @@
 mod generators;
 mod gpu_server;
 mod prerequisites;
+mod registry;
+mod workspace;
 
 use generators::common::{GenerateRequest, GenerateResult};
 
@@ -33,6 +35,12 @@ pub fn run() {
             gpu_server::mutagen::gpu_sync_terminate,
             gpu_server::mutagen::gpu_sync_list,
             gpu_server::provisioning::gpu_provision_user,
+            workspace::validate_path,
+            workspace::create_directory,
+            workspace::list_recent_workspaces,
+            workspace::save_recent_workspace,
+            registry::fetch_registry,
+            registry::get_cached_registry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

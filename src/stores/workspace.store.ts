@@ -20,9 +20,10 @@ const [recentWorkspaces, setRecentWorkspaces] = createSignal<string[]>([]);
 // Path validation
 export interface PathValidation {
   exists: boolean;
-  isDir: boolean;
-  isWritable: boolean;
-  hasClaudeDir: boolean;
+  is_dir: boolean;
+  is_writable: boolean;
+  has_claude_dir: boolean;
+  has_workspace_file: boolean;
 }
 const [pathValidation, setPathValidation] = createSignal<PathValidation | null>(null);
 

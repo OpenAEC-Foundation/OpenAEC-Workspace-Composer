@@ -235,3 +235,56 @@ export function getHardcodedRegistry(): RegistryPackage[] {
     skillsPath: "skills/source",
   }));
 }
+
+/**
+ * Fetch registry via Rust backend (preferred — no CORS, disk cache, higher rate limits)
+ */
+export async function fetchRegistryBackend(forceRefresh = false): Promise<RegistryPackage[]> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const packages = await invoke<any[]>("fetch_registry", { forceRefresh });
+    return packages.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      category: p.category as SkillPackage["category"],
+      skillCount: p.skill_count,
+      repo: p.repo,
+      repoUrl: p.repo_url,
+      status: p.status as SkillPackage["status"],
+      tags: p.tags,
+      publisher: p.publisher as Publisher,
+      updatedAt: p.updated_at,
+      skillsPath: p.skills_path,
+    }));
+  } catch {
+    // Fallback to frontend fetch
+    return fetchRegistry();
+  }
+}
+
+/**
+ * Get cached registry from Rust backend (instant, for offline/startup)
+ */
+export async function getCachedRegistryBackend(): Promise<RegistryPackage[]> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const packages = await invoke<any[]>("get_cached_registry");
+    return packages.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      category: p.category as SkillPackage["category"],
+      skillCount: p.skill_count,
+      repo: p.repo,
+      repoUrl: p.repo_url,
+      status: p.status as SkillPackage["status"],
+      tags: p.tags,
+      publisher: p.publisher as Publisher,
+      updatedAt: p.updated_at,
+      skillsPath: p.skills_path,
+    }));
+  } catch {
+    return getHardcodedRegistry();
+  }
+}

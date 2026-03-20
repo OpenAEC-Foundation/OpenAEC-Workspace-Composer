@@ -92,7 +92,8 @@ async function loadRegistry(forceRefresh = false) {
   setRegistryLoading(true);
   setRegistryError(null);
   try {
-    const live = await fetchRegistry();
+    const { fetchRegistryBackend } = await import("../lib/registry");
+    const live = await fetchRegistryBackend(forceRefresh);
     setRegistryPackages(live);
     setRegistryLastUpdated(new Date());
   } catch (e) {

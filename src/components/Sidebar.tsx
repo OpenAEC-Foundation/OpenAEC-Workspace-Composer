@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import type { PageId } from "../App";
+export type PageId = "home" | "packages" | "presets" | "workflows" | "settings" | "about";
 
 interface Props {
   activePage: PageId;

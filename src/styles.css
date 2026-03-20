@@ -1870,3 +1870,422 @@ a:hover {
   font-size: 0.6875rem;
   font-weight: 500;
 }
+
+/* ============================================================
+   Router Link Styles (for @solidjs/router <A> component)
+   ============================================================ */
+.sidebar-nav-item {
+  text-decoration: none;
+}
+
+/* ============================================================
+   Dashboard Page
+   ============================================================ */
+.dashboard-hero {
+  padding: var(--sp-8) var(--sp-6);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-6);
+}
+
+.dashboard-hero h1 {
+  font-size: 1.75rem;
+  margin-bottom: var(--sp-2);
+}
+
+.dashboard-hero h1 span {
+  color: var(--accent);
+}
+
+.dashboard-hero p {
+  color: var(--text-dim);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  color: inherit;
+  text-align: center;
+}
+
+.action-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+.action-card svg {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.action-card strong {
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+}
+
+.action-card small {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+.dashboard-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  text-align: center;
+}
+
+.dashboard-stat .stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+}
+
+.dashboard-stat .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+  display: block;
+}
+
+/* ============================================================
+   Config Page
+   ============================================================ */
+.config-tabs {
+  display: flex;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-5);
+}
+
+.config-tab {
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.config-tab:hover {
+  color: var(--text-primary);
+}
+
+.config-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.config-section {
+  padding: 0 var(--sp-5);
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-2);
+}
+
+.config-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-item strong {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.config-item small {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+/* Toggle switch */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  min-width: 48px;
+}
+
+.toggle.active {
+  background: rgba(217, 119, 6, 0.2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ============================================================
+   Install Page
+   ============================================================ */
+.install-hero {
+  text-align: center;
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.install-hero h2 {
+  margin-bottom: var(--sp-2);
+}
+
+.install-hero p {
+  color: var(--text-dim);
+}
+
+.install-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+  padding: 0 var(--sp-5);
+}
+
+.install-packages-list {
+  padding: 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+
+.install-package-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-1);
+}
+
+.install-package-item .package-name {
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.install-package-item .skill-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.install-actions {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-6);
+}
+
+.install-result {
+  text-align: center;
+  padding: var(--sp-8);
+}
+
+.install-result.success h2 {
+  color: var(--success);
+}
+
+.install-result.error h2 {
+  color: var(--error);
+}
+
+/* ============================================================
+   Page Common
+   ============================================================ */
+.page {
+  padding: var(--sp-5);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: var(--sp-6);
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  margin-bottom: var(--sp-1);
+}
+
+.page-header p {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+.registry-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.registry-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.registry-status .dot.loading {
+  background: var(--warm-gold);
+  animation: pulse 1s infinite;
+}
+
+.registry-status .dot.error {
+  background: var(--error);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Empty state for recent workspaces etc */
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8);
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-state-card svg {
+  color: var(--text-muted);
+  margin-bottom: var(--sp-3);
+  opacity: 0.5;
+}
+
+.empty-state-card p {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  margin-bottom: var(--sp-1);
+}
+
+.empty-state-card small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* About page */
+.about-page {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.about-page h1 {
+  margin-bottom: var(--sp-4);
+}
+
+.about-page .tech-stack {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-3);
+}
+
+.about-page .tech-badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+/* ============================================================
+   GPU Server — Progress Bars & Sync Cards
+   ============================================================ */
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-input, var(--bg-card));
+  border-radius: var(--radius-full, 9999px);
+  overflow: hidden;
+  margin: var(--sp-1) 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full, 9999px);
+  transition: width 0.3s ease;
+}
+
+.sync-session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.sync-session-card:last-of-type {
+  margin-bottom: 0;
+}
+
+.sync-paths {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) 0;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}

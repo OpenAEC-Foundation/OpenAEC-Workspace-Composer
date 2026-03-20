@@ -1,4 +1,4 @@
-import type { EffortLevel } from "../App";
+import type { EffortLevel } from "../stores/workspace.store";
 
 interface Props {
   projectName: string;

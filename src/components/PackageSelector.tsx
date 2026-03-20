@@ -1,6 +1,6 @@
 import { For, Show, createMemo } from "solid-js";
 import { type SkillPackage, categoryLabels } from "../lib/packages";
-import type { FilterId } from "../App";
+import type { FilterId } from "../stores/packages.store";
 
 interface Props {
   packages: SkillPackage[];

@@ -1,12 +1,11 @@
 import { For, Show } from "solid-js";
-import type { FilterId } from "../App";
+import { type FilterId, availableFilters } from "../stores/packages.store";
 
 interface Props {
   query: string;
   onQueryChange: (query: string) => void;
   activeFilters: FilterId[];
   onFilterToggle: (id: FilterId) => void;
-  availableFilters: { id: FilterId; label: string }[];
 }
 
 export function SearchBar(props: Props) {
@@ -38,7 +37,7 @@ export function SearchBar(props: Props) {
         </Show>
       </div>
       <div class="filter-chips">
-        <For each={props.availableFilters}>
+        <For each={availableFilters}>
           {(filter) => (
             <button
               class={`filter-chip ${props.activeFilters.includes(filter.id) ? "active" : ""}`}

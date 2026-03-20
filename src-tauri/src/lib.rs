@@ -1,4 +1,6 @@
 mod generators;
+mod gpu_server;
+mod prerequisites;
 
 use generators::common::{GenerateRequest, GenerateResult};
 
@@ -16,7 +18,22 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![generate_workspace])
+        .invoke_handler(tauri::generate_handler![
+            generate_workspace,
+            prerequisites::check_prerequisites,
+            gpu_server::config::gpu_load_config,
+            gpu_server::config::gpu_save_config,
+            gpu_server::ssh::gpu_test_connection,
+            gpu_server::ssh::gpu_server_status,
+            gpu_server::ssh::gpu_list_remote_dirs,
+            gpu_server::mutagen::gpu_check_mutagen,
+            gpu_server::mutagen::gpu_sync_create,
+            gpu_server::mutagen::gpu_sync_pause,
+            gpu_server::mutagen::gpu_sync_resume,
+            gpu_server::mutagen::gpu_sync_terminate,
+            gpu_server::mutagen::gpu_sync_list,
+            gpu_server::provisioning::gpu_provision_user,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

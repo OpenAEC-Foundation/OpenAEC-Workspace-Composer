@@ -3,10 +3,13 @@ export function AboutPage() {
     <div class="content-body">
       <div class="content-scroll">
         <div class="card" style={{ "text-align": "center", padding: "var(--sp-8) var(--sp-6)" }}>
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style={{ "margin-bottom": "var(--sp-4)" }}>
-            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-            <polyline points="2 17 12 22 22 17" />
-            <polyline points="2 12 12 17 22 12" />
+          <svg width="56" height="56" viewBox="0 0 32 32" fill="none" style={{ "margin-bottom": "var(--sp-4)" }}>
+            <rect x="4" y="14" width="24" height="14" rx="1" stroke="var(--accent)" stroke-width="1.5" fill="rgba(217, 119, 6, 0.08)" />
+            <path d="M2 14L16 4L30 14" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <rect x="8" y="18" width="5" height="5" rx="0.5" fill="var(--accent)" opacity="0.6" />
+            <rect x="19" y="18" width="5" height="5" rx="0.5" fill="var(--accent)" opacity="0.6" />
+            <rect x="13" y="21" width="6" height="7" rx="0.5" fill="var(--accent)" opacity="0.35" />
+            <rect x="22" y="7" width="3" height="7" rx="0.5" stroke="var(--accent)" stroke-width="1" fill="none" opacity="0.5" />
           </svg>
           <h1 style={{ "font-family": "var(--font-heading)", "font-size": "1.5rem", "margin-bottom": "var(--sp-2)" }}>
             OpenAEC Workspace Composer

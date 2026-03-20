@@ -45,11 +45,11 @@ echo "OK: User $USERNAME provisioned with workspace at /home/$USERNAME/workspace
         pubkey = ssh_public_key.replace('"', ""),
     );
 
-    let mut args = config.ssh_args();
-    args.push(script);
-
     let output = Command::new("ssh")
-        .args(&args)
+        .arg("-o").arg("BatchMode=yes")
+        .arg("-o").arg("ConnectTimeout=10")
+        .arg(&config.ssh_target())
+        .arg(&script)
         .output()
         .map_err(|e| format!("SSH failed: {}", e))?;
 

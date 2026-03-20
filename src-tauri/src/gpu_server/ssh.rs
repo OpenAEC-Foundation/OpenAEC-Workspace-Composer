@@ -2,37 +2,66 @@ use super::{GpuServerConfig, ServerStatus};
 use std::process::Command;
 
 fn run_ssh(config: &GpuServerConfig, remote_cmd: &str) -> Result<String, String> {
-    let mut args = config.ssh_args();
-    args.push(remote_cmd.to_string());
+    let target = config.ssh_target();
+    if target.is_empty() || target == "@" {
+        return Err(format!(
+            "No SSH target configured. host='{}', username='{}', alias={:?}",
+            config.host, config.username, config.ssh_config_host
+        ));
+    }
 
-    let output = Command::new("ssh")
-        .args(&args)
+    let mut cmd = Command::new("ssh");
+    cmd.arg("-o").arg("BatchMode=yes");
+    cmd.arg("-o").arg("ConnectTimeout=10");
+
+    // Add key and port when not using an alias
+    let using_alias = config.ssh_config_host.as_deref().unwrap_or("").len() > 0;
+    if !using_alias {
+        if !config.ssh_key_path.is_empty() {
+            cmd.arg("-i").arg(&config.ssh_key_path);
+        }
+        if config.port != 22 {
+            cmd.arg("-p").arg(config.port.to_string());
+        }
+    }
+
+    cmd.arg(&target);
+    cmd.arg(remote_cmd);
+
+    let output = cmd
         .output()
-        .map_err(|e| format!("SSH failed to start: {}", e))?;
+        .map_err(|e| format!("SSH failed to start: {}. Is ssh.exe on your PATH?", e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        Err(format!("SSH error: {}", stderr))
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        // On usage error, include debug info
+        if stderr.contains("usage:") {
+            Err(format!(
+                "SSH argument error. target='{}', using_alias={}, debug: host='{}', user='{}', alias={:?}",
+                target, using_alias, config.host, config.username, config.ssh_config_host
+            ))
+        } else {
+            Err(format!("SSH error: {}", if stderr.is_empty() { &stdout } else { &stderr }))
+        }
     }
 }
 
 #[tauri::command]
 pub fn gpu_test_connection(config: GpuServerConfig) -> Result<String, String> {
-    run_ssh(&config, "echo connected && hostname")
+    run_ssh(&config, "echo connected && hostname && whoami")
 }
 
 #[tauri::command]
 pub fn gpu_server_status(config: GpuServerConfig) -> Result<ServerStatus, String> {
-    let script = r#"
-echo "---GPU---"
+    let script = r#"echo "---GPU---"
 nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null || echo "NO_GPU"
 echo "---DISK---"
 df -BG /home 2>/dev/null | tail -1
 echo "---UPTIME---"
-uptime -p 2>/dev/null || uptime
-"#;
+uptime -p 2>/dev/null || uptime"#;
 
     let output = run_ssh(&config, script)?;
 
@@ -61,7 +90,6 @@ uptime -p 2>/dev/null || uptime
 
         match section {
             "gpu" if line != "NO_GPU" && !line.is_empty() => {
-                // Format: "NVIDIA RTX 4000 SFF Ada Generation, 2919, 20475"
                 let parts: Vec<&str> = line.split(", ").collect();
                 if parts.len() >= 3 {
                     gpu_name = Some(parts[0].to_string());
@@ -70,7 +98,6 @@ uptime -p 2>/dev/null || uptime
                 }
             }
             "disk" if !line.is_empty() => {
-                // Format: "/dev/md2  1.7T  261G  1.4T  16% /home" (but in GB units)
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 4 {
                     disk_total = parts[1].trim_end_matches('G').parse::<f64>().ok();

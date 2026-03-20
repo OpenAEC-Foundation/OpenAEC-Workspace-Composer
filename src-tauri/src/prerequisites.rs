@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::process::Command;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrerequisiteResult {
     pub name: String,
     pub command: String,
@@ -12,6 +13,7 @@ pub struct PrerequisiteResult {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrerequisitesReport {
     pub checks: Vec<PrerequisiteResult>,
     pub all_required_ok: bool,

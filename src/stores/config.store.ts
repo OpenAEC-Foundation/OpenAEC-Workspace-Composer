@@ -3,6 +3,7 @@ import { createSignal } from "solid-js";
 // Claude Code settings configuration
 export interface ClaudeSettings {
   permissions: string[];
+  customPermissions: string[];
   env: Record<string, string>;
   model: string;
 }
@@ -17,19 +18,47 @@ export interface McpServer {
   args?: string[];
   url?: string;
   env?: Record<string, string>;
+  envVars: Record<string, string>;
 }
 
 export interface Hook {
   id: string;
-  event: "PreToolUse" | "PostToolUse" | "Stop" | "SessionStart" | "SessionEnd";
+  event: "PreToolUse" | "PostToolUse" | "Stop" | "SessionStart" | "SessionEnd" | "UserPromptSubmit";
   type: "command" | "intercept";
   matcher?: string;
   command: string;
+  enabled: boolean;
 }
+
+// CLAUDE.md sections
+export interface ClaudeMdSections {
+  projectName: string;
+  projectDescription: string;
+  teamOrg: string;
+  docLanguage: "nl" | "en";
+  codeLanguage: "en";
+  conventionalCommits: boolean;
+  customConventions: string;
+  protocols: string[];
+  customProtocol: string;
+}
+
+const defaultClaudeMdSections: ClaudeMdSections = {
+  projectName: "",
+  projectDescription: "",
+  teamOrg: "",
+  docLanguage: "en",
+  codeLanguage: "en",
+  conventionalCommits: true,
+  customConventions: "",
+  protocols: ["P-001", "P-002", "P-003", "P-004"],
+  customProtocol: "",
+};
 
 // Settings state
 const defaultSettings: ClaudeSettings = {
   permissions: ["Bash(npm:*)", "Bash(cargo:*)", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Agent"],
+  customPermissions: [],
   env: {},
   model: "",
 };
@@ -58,13 +87,11 @@ const defaultCoreFiles: CoreFileConfig[] = [
 const [coreFiles, setCoreFiles] = createSignal<CoreFileConfig[]>(defaultCoreFiles);
 
 // CLAUDE.md sections
-const [claudeMdSections, setClaudeMdSections] = createSignal({
-  identity: "",
-  stack: "",
-  conventions: "",
-  protocols: "",
-  packages: "",
-});
+const [claudeMdSections, setClaudeMdSections] = createSignal<ClaudeMdSections>({ ...defaultClaudeMdSections });
+
+function updateClaudeMdSection<K extends keyof ClaudeMdSections>(key: K, value: ClaudeMdSections[K]) {
+  setClaudeMdSections((prev) => ({ ...prev, [key]: value }));
+}
 
 function toggleCoreFile(id: string) {
   setCoreFiles((prev) =>
@@ -86,6 +113,16 @@ function toggleMcpServer(id: string) {
   );
 }
 
+function updateMcpServerEnvVar(serverId: string, key: string, value: string) {
+  setMcpServers((prev) =>
+    prev.map((s) =>
+      s.id === serverId
+        ? { ...s, envVars: { ...s.envVars, [key]: value } }
+        : s
+    )
+  );
+}
+
 function addHook(hook: Hook) {
   setHooks((prev) => [...prev, hook]);
 }
@@ -94,11 +131,38 @@ function removeHook(id: string) {
   setHooks((prev) => prev.filter((h) => h.id !== id));
 }
 
+function updateHook(id: string, updates: Partial<Hook>) {
+  setHooks((prev) =>
+    prev.map((h) => (h.id === id ? { ...h, ...updates } : h))
+  );
+}
+
+function toggleHookEnabled(id: string) {
+  setHooks((prev) =>
+    prev.map((h) => (h.id === id ? { ...h, enabled: !h.enabled } : h))
+  );
+}
+
+function addCustomPermission(perm: string) {
+  setSettings((prev) => ({
+    ...prev,
+    customPermissions: [...prev.customPermissions, perm],
+  }));
+}
+
+function removeCustomPermission(perm: string) {
+  setSettings((prev) => ({
+    ...prev,
+    customPermissions: prev.customPermissions.filter((p) => p !== perm),
+  }));
+}
+
 function resetConfig() {
   setSettings({ ...defaultSettings });
   setMcpServers([]);
   setHooks([]);
   setCoreFiles(defaultCoreFiles);
+  setClaudeMdSections({ ...defaultClaudeMdSections });
 }
 
 export const configStore = {
@@ -112,11 +176,17 @@ export const configStore = {
   setCoreFiles,
   claudeMdSections,
   setClaudeMdSections,
+  updateClaudeMdSection,
   toggleCoreFile,
   addMcpServer,
   removeMcpServer,
   toggleMcpServer,
+  updateMcpServerEnvVar,
   addHook,
   removeHook,
+  updateHook,
+  toggleHookEnabled,
+  addCustomPermission,
+  removeCustomPermission,
   resetConfig,
 };

@@ -6,6 +6,7 @@ pub mod ssh;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GpuServerConfig {
     pub host: String,
     pub port: u16,
@@ -37,32 +38,10 @@ impl GpuServerConfig {
         }
         format!("{}@{}", self.username, self.host)
     }
-
-    /// Build SSH command args (key + port + target)
-    pub fn ssh_args(&self) -> Vec<String> {
-        let mut args = vec![
-            "-o".to_string(),
-            "BatchMode=yes".to_string(),
-            "-o".to_string(),
-            "ConnectTimeout=10".to_string(),
-        ];
-        // Only add explicit key/port if not using alias
-        if self.ssh_config_host.as_deref().unwrap_or("").is_empty() {
-            if !self.ssh_key_path.is_empty() {
-                args.push("-i".to_string());
-                args.push(self.ssh_key_path.clone());
-            }
-            if self.port != 22 {
-                args.push("-p".to_string());
-                args.push(self.port.to_string());
-            }
-        }
-        args.push(self.ssh_target());
-        args
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncSession {
     pub id: String,
     pub project_name: String,
@@ -82,6 +61,7 @@ pub enum SyncStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerStatus {
     pub connected: bool,
     pub gpu_name: Option<String>,
@@ -93,6 +73,7 @@ pub struct ServerStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GpuServerState {
     pub config: GpuServerConfig,
     pub sync_sessions: Vec<SyncSession>,

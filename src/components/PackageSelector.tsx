@@ -10,13 +10,20 @@ interface Props {
   activeFilters: FilterId[];
 }
 
+const categoryIcons: Record<SkillPackage["category"], string> = {
+  "aec-bim": "\u{1F3D7}",
+  "erp-business": "\u{1F4CA}",
+  "web-dev": "\u{1F310}",
+  "devops": "\u{2699}",
+  "cross-tech": "\u{1F517}",
+};
+
 export function PackageSelector(props: Props) {
   const filtered = createMemo(() => {
     let pkgs = props.packages;
     const q = props.searchQuery.toLowerCase().trim();
     const filters = props.activeFilters;
 
-    // Apply category / status / publisher filters
     if (!filters.includes("all")) {
       pkgs = pkgs.filter((pkg) => {
         const categoryMatch = filters.some(
@@ -35,7 +42,6 @@ export function PackageSelector(props: Props) {
       });
     }
 
-    // Apply search query
     if (q) {
       pkgs = pkgs.filter(
         (pkg) =>
@@ -62,11 +68,10 @@ export function PackageSelector(props: Props) {
   );
 
   return (
-    <div class="card">
-      <div class="flex justify-between items-center" style={{ "margin-bottom": "var(--sp-4)" }}>
-        <h2 class="card-title" style={{ "margin-bottom": "0" }}>Skill Packages</h2>
-        <span class="font-mono text-accent" style={{ "font-size": "0.75rem" }}>
-          {selectedCount()} of {filtered().length} selected
+    <div class="packages-container">
+      <div class="packages-header">
+        <span class="font-mono text-accent" style={{ "font-size": "0.7rem" }}>
+          {selectedCount()}/{filtered().length} selected
         </span>
       </div>
 
@@ -79,41 +84,75 @@ export function PackageSelector(props: Props) {
             {([category, pkgs]) => (
               <div class="package-category">
                 <h3 class="category-label">
+                  <span class="category-icon">
+                    {categoryIcons[category as SkillPackage["category"]] ?? ""}
+                  </span>
                   {categoryLabels[category as SkillPackage["category"]] ?? category}
                   <span class="category-count">{pkgs.length}</span>
                 </h3>
-                <div class="package-list">
+                <div class="package-grid">
                   <For each={pkgs}>
-                    {(pkg) => (
-                      <label
-                        class={`package-item ${props.selected.includes(pkg.id) ? "selected" : ""}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={props.selected.includes(pkg.id)}
-                          onChange={() => props.onToggle(pkg.id)}
-                        />
-                        <div class="package-info">
-                          <div class="package-header">
-                            <strong class="package-name">{pkg.name}</strong>
-                            <div class="flex items-center gap-2">
-                              <span class="skill-count">{pkg.skillCount} skills</span>
-                              {pkg.status !== "published" && (
-                                <span class={`status-badge ${pkg.status}`}>
-                                  {pkg.status}
-                                </span>
-                              )}
+                    {(pkg) => {
+                      const isSelected = () => props.selected.includes(pkg.id);
+                      return (
+                        <div
+                          class={`package-tile ${isSelected() ? "selected" : ""}`}
+                          onClick={() => props.onToggle(pkg.id)}
+                        >
+                          {/* Check indicator */}
+                          <div class="tile-check">
+                            <div class={`check-circle ${isSelected() ? "checked" : ""}`}>
+                              <Show when={isSelected()}>
+                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                  <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                              </Show>
                             </div>
                           </div>
-                          <small class="package-description">{pkg.description}</small>
-                          <div class="package-tags">
-                            <For each={pkg.tags.slice(0, 4)}>
+
+                          {/* Skill count ring */}
+                          <div class="tile-skill-ring">
+                            <svg viewBox="0 0 48 48" class="ring-svg">
+                              <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(217,119,6,0.15)" stroke-width="3" />
+                              <circle
+                                cx="24" cy="24" r="20"
+                                fill="none"
+                                stroke="var(--accent)"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                                stroke-dasharray={`${Math.min(pkg.skillCount / 80, 1) * 125.6} 125.6`}
+                                transform="rotate(-90 24 24)"
+                                class="ring-progress"
+                              />
+                            </svg>
+                            <span class="ring-number">{pkg.skillCount}</span>
+                          </div>
+
+                          {/* Package name */}
+                          <h4 class="tile-name">{pkg.name}</h4>
+
+                          {/* Description */}
+                          <p class="tile-description">{pkg.description}</p>
+
+                          {/* Tags */}
+                          <div class="tile-tags">
+                            <For each={pkg.tags.slice(0, 3)}>
                               {(tag) => <span class="tag">{tag}</span>}
                             </For>
+                            <Show when={pkg.tags.length > 3}>
+                              <span class="tag tag-more">+{pkg.tags.length - 3}</span>
+                            </Show>
                           </div>
+
+                          {/* Status badge */}
+                          <Show when={pkg.status !== "published"}>
+                            <span class={`status-badge ${pkg.status}`}>{pkg.status}</span>
+                          </Show>
+
+                          <div class="tile-glow" />
                         </div>
-                      </label>
-                    )}
+                      );
+                    }}
                   </For>
                 </div>
               </div>

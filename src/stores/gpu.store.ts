@@ -86,7 +86,7 @@ async function loadConfig() {
     const { invoke } = await import("@tauri-apps/api/core");
     const state = await invoke<GpuServerState>("gpu_load_config");
     setConfig(state.config);
-    setSyncSessions(state.sync_sessions);
+    setSyncSessions(state.syncSessions);
   } catch {
     // First run, no config
   }
@@ -96,7 +96,7 @@ async function saveConfig() {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("gpu_save_config", {
-      state: { config: config(), sync_sessions: syncSessions() },
+      state: { config: config(), syncSessions: syncSessions() },
     });
   } catch {
     // Silent fail on save
@@ -118,11 +118,11 @@ async function createSyncSession(
 
   const session: SyncSession = {
     id: crypto.randomUUID(),
-    project_name: projectName,
-    local_path: localPath,
-    remote_path: remotePath,
+    projectName,
+    localPath,
+    remotePath,
     status: "active",
-    created_at: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   };
   setSyncSessions((prev) => [...prev, session]);
   await saveConfig();
@@ -133,7 +133,7 @@ async function pauseSync(sessionName: string) {
   await invoke("gpu_sync_pause", { sessionName });
   setSyncSessions((prev) =>
     prev.map((s) =>
-      s.project_name === sessionName ? { ...s, status: "paused" as SyncStatus } : s
+      s.projectName === sessionName ? { ...s, status: "paused" as SyncStatus } : s
     )
   );
   await saveConfig();
@@ -144,7 +144,7 @@ async function resumeSync(sessionName: string) {
   await invoke("gpu_sync_resume", { sessionName });
   setSyncSessions((prev) =>
     prev.map((s) =>
-      s.project_name === sessionName
+      s.projectName === sessionName
         ? { ...s, status: "active" as SyncStatus }
         : s
     )
@@ -156,7 +156,7 @@ async function terminateSync(sessionName: string) {
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("gpu_sync_terminate", { sessionName });
   setSyncSessions((prev) =>
-    prev.filter((s) => s.project_name !== sessionName)
+    prev.filter((s) => s.projectName !== sessionName)
   );
   await saveConfig();
 }

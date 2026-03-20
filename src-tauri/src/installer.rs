@@ -55,7 +55,8 @@ fn emit_progress(app: &AppHandle, step: &str, current: u32, total: u32, detail: 
 fn package_repo_dir(package_id: &str) -> &str {
     match package_id {
         "blender-bonsai" => "Blender-Bonsai-ifcOpenshell-Sverchok-Claude-Skill-Package",
-        "erpnext" => "ERPNext_Anthropic_Claude_Development_Skill_Package",
+        "frappe" | "erpnext" => "Frappe_Claude_Skill_Package",
+        "open-pdf-studio" => "Open-PDF-Studio-Claude-Skill-Package",
         "tauri-2" => "Tauri-2-Claude-Skill-Package",
         "react" => "React-Claude-Skill-Package",
         "solidjs" => "SolidJS-Claude-Skill-Package",

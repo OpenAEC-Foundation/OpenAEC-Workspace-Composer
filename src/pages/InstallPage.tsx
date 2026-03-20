@@ -78,17 +78,17 @@ export function InstallPage() {
       const { invoke } = await import("@tauri-apps/api/core");
       const result = await invoke("install_workspace", {
         request: {
-          workflow_type: workspaceStore.workflowType(),
+          workflowType: workspaceStore.workflowType(),
           path: workspaceStore.workspacePath(),
           name: workspaceStore.projectName(),
           effort: workspaceStore.effortLevel(),
           packages: workspaceStore.workflowType() === "skill-package" ? packagesStore.selectedPackages() : undefined,
-          source_version: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.sourceVersion() : undefined,
-          target_version: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetVersion() : undefined,
-          target_repo: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetRepo() : undefined,
-          init_git: true,
-          open_vscode: false,
-          core_files: [],
+          sourceVersion: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.sourceVersion() : undefined,
+          targetVersion: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetVersion() : undefined,
+          targetRepo: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetRepo() : undefined,
+          initGit: true,
+          openVscode: false,
+          coreFiles: [],
           permissions: [],
         },
       });

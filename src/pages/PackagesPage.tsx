@@ -53,7 +53,7 @@ export function PackagesPage() {
       </div>
 
       {/* Package selector */}
-      <div style={{ flex: "1", overflow: "auto", padding: "var(--sp-4) var(--sp-5)" }}>
+      <div style={{ flex: "1", overflow: "auto", padding: "var(--sp-2) var(--sp-4)" }}>
         <PackageSelector
           packages={packagesStore.registryPackages()}
           selected={packagesStore.selectedPackages()}

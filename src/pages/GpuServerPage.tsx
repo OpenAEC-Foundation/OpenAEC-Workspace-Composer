@@ -24,10 +24,10 @@ function ConnectionConfig() {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ multiple: false });
-      if (selected) update("ssh_key_path", selected as string);
+      if (selected) update("sshKeyPath", selected as string);
     } catch {
       const path = prompt("SSH key path:");
-      if (path) update("ssh_key_path", path);
+      if (path) update("sshKeyPath", path);
     }
   }
 
@@ -78,9 +78,9 @@ function ConnectionConfig() {
           <input
             type="text"
             placeholder="hetzner"
-            value={cfg().ssh_config_host || ""}
+            value={cfg().sshConfigHost || ""}
             onInput={(e) =>
-              update("ssh_config_host", e.currentTarget.value || null)
+              update("sshConfigHost", e.currentTarget.value || null)
             }
           />
         </div>
@@ -92,8 +92,8 @@ function ConnectionConfig() {
           <input
             type="text"
             placeholder="~/.ssh/id_ed25519"
-            value={cfg().ssh_key_path}
-            onInput={(e) => update("ssh_key_path", e.currentTarget.value)}
+            value={cfg().sshKeyPath}
+            onInput={(e) => update("sshKeyPath", e.currentTarget.value)}
           />
           <button class="btn btn-secondary" onClick={handleBrowseKey}>
             Browse
@@ -157,14 +157,14 @@ function ServerStatusPanel() {
 
   function vramPercent(): number {
     const s = status();
-    if (!s?.gpu_vram_used_mb || !s?.gpu_vram_total_mb) return 0;
-    return Math.round((s.gpu_vram_used_mb / s.gpu_vram_total_mb) * 100);
+    if (!s?.gpuVramUsedMb || !s?.gpuVramTotalMb) return 0;
+    return Math.round((s.gpuVramUsedMb / s.gpuVramTotalMb) * 100);
   }
 
   function diskPercent(): number {
     const s = status();
-    if (!s?.disk_used_gb || !s?.disk_total_gb) return 0;
-    return Math.round((s.disk_used_gb / s.disk_total_gb) * 100);
+    if (!s?.diskUsedGb || !s?.diskTotalGb) return 0;
+    return Math.round((s.diskUsedGb / s.diskTotalGb) * 100);
   }
 
   return (
@@ -179,10 +179,10 @@ function ServerStatusPanel() {
           Server Status
         </h2>
 
-        <Show when={status()?.gpu_name}>
+        <Show when={status()?.gpuName}>
           <div class="form-group" style={{ "margin-bottom": "var(--sp-3)" }}>
             <label style={{ "margin-bottom": "var(--sp-1)" }}>
-              GPU: {status()!.gpu_name}
+              GPU: {status()!.gpuName}
             </label>
             <div class="progress-bar">
               <div
@@ -191,13 +191,13 @@ function ServerStatusPanel() {
               />
             </div>
             <small class="text-muted">
-              {status()!.gpu_vram_used_mb} / {status()!.gpu_vram_total_mb} MB (
+              {status()!.gpuVramUsedMb} / {status()!.gpuVramTotalMb} MB (
               {vramPercent()}%)
             </small>
           </div>
         </Show>
 
-        <Show when={status()?.disk_total_gb}>
+        <Show when={status()?.diskTotalGb}>
           <div class="form-group" style={{ "margin-bottom": "var(--sp-3)" }}>
             <label style={{ "margin-bottom": "var(--sp-1)" }}>Disk</label>
             <div class="progress-bar">
@@ -207,8 +207,8 @@ function ServerStatusPanel() {
               />
             </div>
             <small class="text-muted">
-              {status()!.disk_used_gb?.toFixed(0)} /{" "}
-              {status()!.disk_total_gb?.toFixed(0)} GB ({diskPercent()}%)
+              {status()!.diskUsedGb?.toFixed(0)} /{" "}
+              {status()!.diskTotalGb?.toFixed(0)} GB ({diskPercent()}%)
             </small>
           </div>
         </Show>
@@ -321,7 +321,7 @@ function SyncSessionManager() {
           <div class="sync-session-card">
             <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "var(--sp-2)" }}>
               <strong style={{ color: "var(--text-primary)" }}>
-                {session.project_name}
+                {session.projectName}
               </strong>
               <span style={{ display: "inline-flex", "align-items": "center", gap: "var(--sp-1)" }}>
                 <span
@@ -335,20 +335,20 @@ function SyncSessionManager() {
             </div>
             <div class="sync-paths">
               <span class="font-mono text-dim" style={{ "font-size": "0.75rem" }}>
-                {session.local_path}
+                {session.localPath}
               </span>
               <span style={{ color: "var(--accent)", "font-size": "0.9rem" }}>
                 ↕
               </span>
               <span class="font-mono text-dim" style={{ "font-size": "0.75rem" }}>
-                {session.remote_path}
+                {session.remotePath}
               </span>
             </div>
             <div style={{ display: "flex", gap: "var(--sp-2)", "margin-top": "var(--sp-2)" }}>
               <Show when={session.status === "active"}>
                 <button
                   class="btn btn-secondary btn-sm"
-                  onClick={() => gpuStore.pauseSync(session.project_name)}
+                  onClick={() => gpuStore.pauseSync(session.projectName)}
                 >
                   Pause
                 </button>
@@ -356,7 +356,7 @@ function SyncSessionManager() {
               <Show when={session.status === "paused"}>
                 <button
                   class="btn btn-secondary btn-sm"
-                  onClick={() => gpuStore.resumeSync(session.project_name)}
+                  onClick={() => gpuStore.resumeSync(session.projectName)}
                 >
                   Resume
                 </button>
@@ -364,7 +364,7 @@ function SyncSessionManager() {
               <button
                 class="btn btn-secondary btn-sm"
                 style={{ color: "var(--error)" }}
-                onClick={() => gpuStore.terminateSync(session.project_name)}
+                onClick={() => gpuStore.terminateSync(session.projectName)}
               >
                 Stop
               </button>
@@ -527,7 +527,7 @@ export function GpuServerPage() {
     await gpuStore.loadConfig();
     await gpuStore.checkMutagen();
     // Auto-connect if config exists
-    if (gpuStore.config().host || gpuStore.config().ssh_config_host) {
+    if (gpuStore.config().host || gpuStore.config().sshConfigHost) {
       try {
         await gpuStore.testConnection();
         await gpuStore.fetchServerStatus();

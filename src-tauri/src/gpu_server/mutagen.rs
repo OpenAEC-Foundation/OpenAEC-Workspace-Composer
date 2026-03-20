@@ -43,11 +43,11 @@ pub fn gpu_sync_create(
     let remote = format!("{}:{}", config.ssh_target(), remote_path);
 
     // Create the remote directory first
-    let mkdir_args = config.ssh_args();
-    let mut mkdir_cmd_args = mkdir_args.clone();
-    mkdir_cmd_args.push(format!("mkdir -p {}", remote_path));
     Command::new("ssh")
-        .args(&mkdir_cmd_args)
+        .arg("-o").arg("BatchMode=yes")
+        .arg("-o").arg("ConnectTimeout=10")
+        .arg(&config.ssh_target())
+        .arg(format!("mkdir -p {}", remote_path))
         .output()
         .ok();
 

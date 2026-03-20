@@ -30,10 +30,11 @@ export function Titlebar() {
   return (
     <div class="titlebar" data-tauri-drag-region>
       <div class="titlebar-brand" data-tauri-drag-region>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+          <rect x="4" y="14" width="24" height="14" rx="1" stroke="var(--accent)" stroke-width="2" />
+          <path d="M2 14L16 4L30 14" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <rect x="9" y="18" width="4" height="4" fill="var(--accent)" opacity="0.6" />
+          <rect x="19" y="18" width="4" height="4" fill="var(--accent)" opacity="0.6" />
         </svg>
         <span>OpenAEC</span>
         <span style={{ color: "var(--text-muted)", "font-weight": "400", "font-size": "0.75rem" }}>

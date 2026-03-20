@@ -21,7 +21,12 @@ const [installStatus, setInstallStatus] = createSignal<InstallStatus>("idle");
 const [installProgress, setInstallProgress] = createSignal(0);
 const [installSteps, setInstallSteps] = createSignal<InstallStep[]>([]);
 const [installError, setInstallError] = createSignal<string | null>(null);
-const [installResult, setInstallResult] = createSignal<{ workspaceFile: string; filesCreated: string[] } | null>(null);
+const [installResult, setInstallResult] = createSignal<{
+  workspaceFile: string;
+  filesCreated: string[];
+  packagesInstalled?: string[];
+  skillsTotal?: number;
+} | null>(null);
 
 // Prerequisites
 const [prerequisites, setPrerequisites] = createSignal<PrerequisiteCheck[]>([]);

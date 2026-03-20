@@ -1,249 +1,235 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, Show, createMemo } from "solid-js";
 import { configStore } from "../stores/config.store";
+import { settingsSchema, defaultPermissions } from "../lib/claude-settings-schema";
+import { mcpServerTemplates, mcpCategoryLabels, type McpServerTemplate } from "../lib/mcp-servers";
+import { hookTemplates } from "../lib/hooks-templates";
 
-type Tab = "settings" | "mcp" | "hooks" | "core-files";
+type ConfigTab = "settings" | "mcp" | "hooks" | "core-files";
 
 export function ConfigurePage() {
-  const [activeTab, setActiveTab] = createSignal<Tab>("settings");
+  const [activeTab, setActiveTab] = createSignal<ConfigTab>("settings");
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "settings", label: "Settings" },
+  const tabs: { id: ConfigTab; label: string }[] = [
+    { id: "settings", label: "Permissions" },
     { id: "mcp", label: "MCP Servers" },
     { id: "hooks", label: "Hooks" },
     { id: "core-files", label: "Core Files" },
   ];
 
   return (
-    <div class="content-body">
-      <div class="content-scroll">
-        <div class="card">
-          <h2 class="card-title">Configuration</h2>
+    <div class="page">
+      <div class="page-header">
+        <h1>Configure Workspace</h1>
+        <p>Set up Claude Code settings, MCP servers, hooks, and core files for your workspace.</p>
+      </div>
 
-          {/* Tab navigation */}
-          <div style={{
-            display: "flex",
-            gap: "var(--sp-1)",
-            "margin-bottom": "var(--sp-4)",
-            "border-bottom": "1px solid var(--border)",
-            "padding-bottom": "var(--sp-2)",
-          }}>
-            <For each={tabs}>
-              {(tab) => (
-                <button
-                  class={`btn ${activeTab() === tab.id ? "btn-primary" : "btn-ghost"}`}
-                  style={{ "font-size": "0.8rem" }}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
+      <div class="config-tabs">
+        <For each={tabs}>
+          {(tab) => (
+            <button
+              class={`config-tab ${activeTab() === tab.id ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          )}
+        </For>
+      </div>
+
+      <div class="config-section">
+        <Show when={activeTab() === "settings"}>
+          <SettingsTab />
+        </Show>
+        <Show when={activeTab() === "mcp"}>
+          <McpTab />
+        </Show>
+        <Show when={activeTab() === "hooks"}>
+          <HooksTab />
+        </Show>
+        <Show when={activeTab() === "core-files"}>
+          <CoreFilesTab />
+        </Show>
+      </div>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const permissions = createMemo(() => configStore.settings().permissions);
+
+  function togglePermission(key: string) {
+    const current = configStore.settings();
+    const perms = current.permissions.includes(key)
+      ? current.permissions.filter(p => p !== key)
+      : [...current.permissions, key];
+    configStore.setSettings({ ...current, permissions: perms });
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "var(--sp-4)" }}>
+        <h3>Permission Rules</h3>
+        <button class="btn btn-ghost" onClick={() => {
+          configStore.setSettings({ ...configStore.settings(), permissions: [...defaultPermissions] });
+        }}>
+          Reset to defaults
+        </button>
+      </div>
+      <For each={settingsSchema.filter(s => s.category === "permissions")}>
+        {(setting) => (
+          <div class="config-item">
+            <div>
+              <strong>{setting.label}</strong>
+              <small>{setting.description}</small>
+            </div>
+            <button
+              class={`toggle ${permissions().includes(setting.key) ? "active" : ""}`}
+              onClick={() => togglePermission(setting.key)}
+            >
+              {permissions().includes(setting.key) ? "Allow" : "Deny"}
+            </button>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
+
+function McpTab() {
+  const grouped = createMemo(() => {
+    const groups: Record<string, McpServerTemplate[]> = {};
+    for (const server of mcpServerTemplates) {
+      if (!groups[server.category]) groups[server.category] = [];
+      groups[server.category].push(server);
+    }
+    return groups;
+  });
+
+  const enabledIds = createMemo(() => configStore.mcpServers().map(s => s.id));
+
+  function toggleServer(template: McpServerTemplate) {
+    if (enabledIds().includes(template.id)) {
+      configStore.removeMcpServer(template.id);
+    } else {
+      configStore.addMcpServer({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        enabled: true,
+        type: template.type,
+        command: template.command,
+        args: template.args,
+        url: template.url,
+      });
+    }
+  }
+
+  return (
+    <div>
+      <p class="text-dim" style={{ "margin-bottom": "var(--sp-4)", "font-size": "0.8125rem" }}>
+        Select MCP servers to configure in your workspace. Environment variables can be set after installation.
+      </p>
+      <For each={Object.entries(grouped())}>
+        {([category, servers]) => (
+          <div style={{ "margin-bottom": "var(--sp-5)" }}>
+            <h3 class="category-label" style={{ "margin-bottom": "var(--sp-2)" }}>
+              {mcpCategoryLabels[category] || category}
+            </h3>
+            <For each={servers}>
+              {(server) => (
+                <div class="config-item">
+                  <div>
+                    <strong>{server.name}</strong>
+                    <small>{server.description}</small>
+                    <Show when={server.envVars && server.envVars.length > 0}>
+                      <small style={{ color: "var(--warm-gold)" }}>
+                        Requires: {server.envVars!.map(v => v.key).join(", ")}
+                      </small>
+                    </Show>
+                  </div>
+                  <button
+                    class={`toggle ${enabledIds().includes(server.id) ? "active" : ""}`}
+                    onClick={() => toggleServer(server)}
+                  >
+                    {enabledIds().includes(server.id) ? "On" : "Off"}
+                  </button>
+                </div>
               )}
             </For>
           </div>
+        )}
+      </For>
+    </div>
+  );
+}
 
-          {/* Settings tab */}
-          <Show when={activeTab() === "settings"}>
-            <div>
-              <h3 style={{ "font-family": "var(--font-heading)", "font-size": "0.95rem", "margin-bottom": "var(--sp-3)" }}>
-                Claude Code Permissions
-              </h3>
-              <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
-                Configure which tools are allowed in settings.local.json
-              </p>
-              <div style={{ display: "flex", "flex-direction": "column", gap: "var(--sp-2)" }}>
-                <For each={configStore.settings().permissions}>
-                  {(perm, index) => (
-                    <div class="config-item" style={{
-                      display: "flex",
-                      "justify-content": "space-between",
-                      "align-items": "center",
-                      padding: "var(--sp-2) var(--sp-3)",
-                      background: "var(--bg-input)",
-                      "border-radius": "var(--radius-sm)",
-                    }}>
-                      <code class="font-mono" style={{ "font-size": "0.8rem" }}>{perm}</code>
-                      <button
-                        class="btn btn-ghost"
-                        style={{ padding: "2px 6px", "font-size": "0.7rem" }}
-                        onClick={() => {
-                          const perms = [...configStore.settings().permissions];
-                          perms.splice(index(), 1);
-                          configStore.setSettings({ ...configStore.settings(), permissions: perms });
-                        }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </div>
-          </Show>
+function HooksTab() {
+  const activeHookIds = createMemo(() => configStore.hooks().map(h => h.id));
 
-          {/* MCP Servers tab */}
-          <Show when={activeTab() === "mcp"}>
-            <div>
-              <h3 style={{ "font-family": "var(--font-heading)", "font-size": "0.95rem", "margin-bottom": "var(--sp-3)" }}>
-                MCP Servers
-              </h3>
-              <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
-                Configure Model Context Protocol servers for your workspace
-              </p>
-              <Show
-                when={configStore.mcpServers().length > 0}
-                fallback={
-                  <div class="empty-state">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                      <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-                      <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-                      <line x1="6" y1="6" x2="6.01" y2="6" />
-                      <line x1="6" y1="18" x2="6.01" y2="18" />
-                    </svg>
-                    <p>No MCP servers configured</p>
-                    <small>MCP server configuration coming soon</small>
-                  </div>
-                }
-              >
-                <For each={configStore.mcpServers()}>
-                  {(server) => (
-                    <div class="config-item" style={{
-                      display: "flex",
-                      "justify-content": "space-between",
-                      "align-items": "center",
-                      padding: "var(--sp-2) var(--sp-3)",
-                      background: "var(--bg-input)",
-                      "border-radius": "var(--radius-sm)",
-                      "margin-bottom": "var(--sp-2)",
-                    }}>
-                      <div>
-                        <strong style={{ "font-size": "0.85rem" }}>{server.name}</strong>
-                        <small class="text-dim" style={{ display: "block" }}>{server.description}</small>
-                      </div>
-                      <button
-                        class={`toggle ${server.enabled ? "active" : ""}`}
-                        onClick={() => configStore.toggleMcpServer(server.id)}
-                        style={{
-                          padding: "4px 10px",
-                          "border-radius": "var(--radius-full)",
-                          border: "1px solid var(--border)",
-                          background: server.enabled ? "var(--accent)" : "transparent",
-                          color: server.enabled ? "#fff" : "var(--text-dim)",
-                          cursor: "pointer",
-                          "font-size": "0.75rem",
-                        }}
-                      >
-                        {server.enabled ? "On" : "Off"}
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </Show>
-            </div>
-          </Show>
+  function toggleHook(template: typeof hookTemplates[0]) {
+    if (activeHookIds().includes(template.id)) {
+      configStore.removeHook(template.id);
+    } else {
+      configStore.addHook({
+        id: template.id,
+        event: template.event as any,
+        type: "command",
+        matcher: template.matcher,
+        command: template.command,
+      });
+    }
+  }
 
-          {/* Hooks tab */}
-          <Show when={activeTab() === "hooks"}>
+  return (
+    <div>
+      <p class="text-dim" style={{ "margin-bottom": "var(--sp-4)", "font-size": "0.8125rem" }}>
+        Hooks run automatically in response to Claude Code events. Select templates to include.
+      </p>
+      <For each={hookTemplates}>
+        {(template) => (
+          <div class="config-item">
             <div>
-              <h3 style={{ "font-family": "var(--font-heading)", "font-size": "0.95rem", "margin-bottom": "var(--sp-3)" }}>
-                Hooks
-              </h3>
-              <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
-                Configure lifecycle hooks for Claude Code sessions
-              </p>
-              <Show
-                when={configStore.hooks().length > 0}
-                fallback={
-                  <div class="empty-state">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                    </svg>
-                    <p>No hooks configured</p>
-                    <small>Hook configuration coming soon</small>
-                  </div>
-                }
-              >
-                <For each={configStore.hooks()}>
-                  {(hook) => (
-                    <div class="config-item" style={{
-                      display: "flex",
-                      "justify-content": "space-between",
-                      "align-items": "center",
-                      padding: "var(--sp-2) var(--sp-3)",
-                      background: "var(--bg-input)",
-                      "border-radius": "var(--radius-sm)",
-                      "margin-bottom": "var(--sp-2)",
-                    }}>
-                      <div>
-                        <strong style={{ "font-size": "0.85rem" }}>{hook.event}</strong>
-                        <code class="font-mono text-dim" style={{ display: "block", "font-size": "0.75rem" }}>{hook.command}</code>
-                      </div>
-                      <button
-                        class="btn btn-ghost"
-                        style={{ padding: "2px 6px" }}
-                        onClick={() => configStore.removeHook(hook.id)}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </Show>
+              <strong>{template.name}</strong>
+              <small>{template.description}</small>
+              <small style={{ color: "var(--accent)" }}>
+                {template.event}{template.matcher ? ` (${template.matcher})` : ""}
+              </small>
             </div>
-          </Show>
+            <button
+              class={`toggle ${activeHookIds().includes(template.id) ? "active" : ""}`}
+              onClick={() => toggleHook(template)}
+            >
+              {activeHookIds().includes(template.id) ? "On" : "Off"}
+            </button>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
 
-          {/* Core Files tab */}
-          <Show when={activeTab() === "core-files"}>
+function CoreFilesTab() {
+  return (
+    <div>
+      <p class="text-dim" style={{ "margin-bottom": "var(--sp-4)", "font-size": "0.8125rem" }}>
+        Select which core documentation files to generate in your workspace.
+      </p>
+      <For each={configStore.coreFiles()}>
+        {(file) => (
+          <div class="config-item">
             <div>
-              <h3 style={{ "font-family": "var(--font-heading)", "font-size": "0.95rem", "margin-bottom": "var(--sp-3)" }}>
-                Core Files
-              </h3>
-              <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
-                Toggle which core files to generate in your workspace
-              </p>
-              <div style={{ display: "flex", "flex-direction": "column", gap: "var(--sp-2)" }}>
-                <For each={configStore.coreFiles()}>
-                  {(file) => (
-                    <div class="config-item" style={{
-                      display: "flex",
-                      "justify-content": "space-between",
-                      "align-items": "center",
-                      padding: "var(--sp-2) var(--sp-3)",
-                      background: "var(--bg-input)",
-                      "border-radius": "var(--radius-sm)",
-                    }}>
-                      <div>
-                        <strong style={{ "font-size": "0.85rem" }}>{file.name}</strong>
-                        <small class="text-dim" style={{ display: "block" }}>{file.description}</small>
-                      </div>
-                      <button
-                        class={`toggle ${file.enabled ? "active" : ""}`}
-                        onClick={() => configStore.toggleCoreFile(file.id)}
-                        style={{
-                          padding: "4px 10px",
-                          "border-radius": "var(--radius-full)",
-                          border: "1px solid var(--border)",
-                          background: file.enabled ? "var(--accent)" : "transparent",
-                          color: file.enabled ? "#fff" : "var(--text-dim)",
-                          cursor: "pointer",
-                          "font-size": "0.75rem",
-                        }}
-                      >
-                        {file.enabled ? "On" : "Off"}
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </div>
+              <strong>{file.name}</strong>
+              <small>{file.description}</small>
             </div>
-          </Show>
-        </div>
-      </div>
+            <button
+              class={`toggle ${file.enabled ? "active" : ""}`}
+              onClick={() => configStore.toggleCoreFile(file.id)}
+            >
+              {file.enabled ? "On" : "Off"}
+            </button>
+          </div>
+        )}
+      </For>
     </div>
   );
 }

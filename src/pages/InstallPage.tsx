@@ -1,4 +1,4 @@
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, For, Show, onMount, onCleanup } from "solid-js";
 import { workspaceStore } from "../stores/workspace.store";
 import { packagesStore } from "../stores/packages.store";
 import { configStore } from "../stores/config.store";
@@ -25,7 +25,7 @@ export function InstallPage() {
   );
 
   const buttonLabel = createMemo(() =>
-    workspaceStore.workflowType() === "skill-package" ? "Generate Workspace" : "Bootstrap Upgrade"
+    workspaceStore.workflowType() === "skill-package" ? "Install Workspace" : "Bootstrap Upgrade"
   );
 
   function canInstall(): boolean {
@@ -36,12 +36,47 @@ export function InstallPage() {
     return workspaceStore.sourceVersion() !== "" && workspaceStore.targetVersion() !== "";
   }
 
+  // Listen for install-progress events from Tauri backend
+  onMount(async () => {
+    try {
+      const { listen } = await import("@tauri-apps/api/event");
+      const unlisten = await listen<{
+        step: string;
+        current: number;
+        total: number;
+        percent: number;
+        detail: string;
+      }>("install-progress", (event) => {
+        const progress = event.payload;
+        installStore.setInstallProgress(progress.percent);
+        installStore.setInstallSteps((prev) => {
+          const existing = prev.find((s) => s.id === progress.step);
+          if (existing) {
+            return prev.map((s) =>
+              s.id === progress.step
+                ? { ...s, status: progress.percent >= 100 ? "done" as const : "active" as const, label: progress.detail }
+                : s
+            );
+          }
+          return [
+            ...prev.map((s) => (s.status === "active" ? { ...s, status: "done" as const } : s)),
+            { id: progress.step, label: progress.detail, status: "active" as const },
+          ];
+        });
+      });
+      onCleanup(() => unlisten());
+    } catch {
+      // Not running in Tauri environment
+    }
+  });
+
   async function handleInstall() {
     if (!canInstall()) return;
+    installStore.resetInstall();
     installStore.setInstallStatus("installing");
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const result = await invoke("generate_workspace", {
+      const result = await invoke("install_workspace", {
         request: {
           workflow_type: workspaceStore.workflowType(),
           path: workspaceStore.workspacePath(),
@@ -51,13 +86,44 @@ export function InstallPage() {
           source_version: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.sourceVersion() : undefined,
           target_version: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetVersion() : undefined,
           target_repo: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetRepo() : undefined,
+          init_git: true,
+          open_vscode: false,
+          core_files: [],
+          permissions: [],
         },
       });
       installStore.setInstallResult(result as any);
       installStore.setInstallStatus("success");
+      // Mark all steps as done
+      installStore.setInstallSteps((prev) =>
+        prev.map((s) => ({ ...s, status: "done" as const }))
+      );
     } catch (e) {
       installStore.setInstallError(e instanceof Error ? e.message : String(e));
       installStore.setInstallStatus("error");
+      // Mark last active step as error
+      installStore.setInstallSteps((prev) => {
+        const lastActive = [...prev].reverse().find((s) => s.status === "active");
+        if (lastActive) {
+          return prev.map((s) =>
+            s.id === lastActive.id ? { ...s, status: "error" as const } : s
+          );
+        }
+        return prev;
+      });
+    }
+  }
+
+  async function handleOpenVSCode() {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = installStore.installResult();
+      if (result) {
+        const wsFile = workspaceStore.workspacePath() + "/" + result.workspaceFile;
+        await invoke("open_in_vscode", { path: wsFile });
+      }
+    } catch {
+      // Ignore
     }
   }
 
@@ -221,8 +287,30 @@ export function InstallPage() {
           </Show>
         </div>
 
+        {/* Installation progress */}
+        <Show when={installStore.installStatus() === "installing"}>
+          <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--accent)" }}>
+            <h2 class="card-title">Installing...</h2>
+            <div class="install-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" style={{ width: `${installStore.installProgress()}%` }} />
+              </div>
+              <For each={installStore.installSteps()}>
+                {(step) => (
+                  <div class={`progress-step ${step.status}`}>
+                    <span class="step-indicator">
+                      {step.status === "done" ? "\u2713" : step.status === "active" ? "\u25CF" : step.status === "error" ? "\u2717" : "\u25CB"}
+                    </span>
+                    <span>{step.label}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
         {/* Validation warnings */}
-        <Show when={!canInstall()}>
+        <Show when={!canInstall() && installStore.installStatus() !== "installing"}>
           <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--warm-gold)" }}>
             <p class="text-dim" style={{ "font-size": "0.8rem" }}>
               <Show when={!workspaceStore.workspacePath()}>
@@ -241,27 +329,76 @@ export function InstallPage() {
         {/* Install result */}
         <Show when={installStore.installStatus() === "success" && installStore.installResult()}>
           <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--success)" }}>
-            <h2 class="card-title" style={{ color: "var(--success)" }}>Workspace Generated</h2>
+            <h2 class="card-title" style={{ color: "var(--success)" }}>Workspace Installed</h2>
             <p class="text-dim" style={{ "font-size": "0.85rem" }}>
               Workspace file: <code class="font-mono">{installStore.installResult()!.workspaceFile}</code>
             </p>
             <p class="text-dim" style={{ "font-size": "0.8rem", "margin-top": "var(--sp-1)" }}>
               {installStore.installResult()!.filesCreated.length} files created
+              <Show when={(installStore.installResult() as any)?.packagesInstalled?.length > 0}>
+                {" "}&middot; {(installStore.installResult() as any).packagesInstalled.length} packages installed
+              </Show>
+              <Show when={(installStore.installResult() as any)?.skillsTotal > 0}>
+                {" "}&middot; {(installStore.installResult() as any).skillsTotal} skills
+              </Show>
             </p>
+
+            {/* Completed progress steps */}
+            <Show when={installStore.installSteps().length > 0}>
+              <div class="install-progress" style={{ "margin-top": "var(--sp-3)" }}>
+                <For each={installStore.installSteps()}>
+                  {(step) => (
+                    <div class={`progress-step ${step.status}`}>
+                      <span class="step-indicator">
+                        {step.status === "done" ? "\u2713" : step.status === "error" ? "\u2717" : "\u25CB"}
+                      </span>
+                      <span>{step.label}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+
+            <div style={{ "margin-top": "var(--sp-4)", display: "flex", gap: "var(--sp-3)" }}>
+              <button class="btn-success" onClick={handleOpenVSCode}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ "margin-right": "6px", "vertical-align": "middle" }}>
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Open in VS Code
+              </button>
+            </div>
           </div>
         </Show>
 
         {/* Install error */}
         <Show when={installStore.installStatus() === "error"}>
           <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--error)" }}>
-            <h2 class="card-title" style={{ color: "var(--error)" }}>Error</h2>
+            <h2 class="card-title" style={{ color: "var(--error)" }}>Installation Error</h2>
             <p class="text-dim font-mono" style={{ "font-size": "0.8rem" }}>
               {installStore.installError()}
             </p>
+
+            {/* Show progress steps with error */}
+            <Show when={installStore.installSteps().length > 0}>
+              <div class="install-progress" style={{ "margin-top": "var(--sp-3)" }}>
+                <For each={installStore.installSteps()}>
+                  {(step) => (
+                    <div class={`progress-step ${step.status}`}>
+                      <span class="step-indicator">
+                        {step.status === "done" ? "\u2713" : step.status === "error" ? "\u2717" : "\u25CB"}
+                      </span>
+                      <span>{step.label}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </Show>
 
-        {/* Generate button */}
+        {/* Install button */}
         <div style={{ "margin-top": "var(--sp-4)", "padding-bottom": "var(--sp-4)" }}>
           <button
             class="btn btn-generate"
@@ -272,7 +409,7 @@ export function InstallPage() {
             <Show when={!installStore.isInstalling()} fallback={
               <>
                 <span class="spinner" />
-                Generating...
+                Installing...
               </>
             }>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

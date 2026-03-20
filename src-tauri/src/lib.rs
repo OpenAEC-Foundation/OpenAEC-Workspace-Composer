@@ -1,5 +1,6 @@
 mod generators;
 mod gpu_server;
+mod installer;
 mod prerequisites;
 mod registry;
 mod workspace;
@@ -41,6 +42,8 @@ pub fn run() {
             workspace::save_recent_workspace,
             registry::fetch_registry,
             registry::get_cached_registry,
+            installer::install_workspace,
+            installer::open_in_vscode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

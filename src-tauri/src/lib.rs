@@ -2,13 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, Deserialize)]
-struct GenerateRequest {
-    path: String,
-    name: String,
-    packages: Vec<String>,
-}
-
 #[derive(Debug, Serialize)]
 struct GenerateResult {
     workspace_file: String,
@@ -149,23 +142,22 @@ fn generate_claude_md(name: &str, packages: &[String]) -> String {
 
 fn package_id_to_repo_name(id: &str) -> String {
     match id {
-        "blender-bonsai" => "Blender-Bonsai-ifcOpenshell-Sverchok-Claude-Skill-Package",
-        "erpnext" => "ERPNext_Anthropic_Claude_Development_Skill_Package",
-        "tauri-2" => "Tauri-2-Claude-Skill-Package",
-        "solidjs" => "SolidJS-Claude-Skill-Package",
-        "react" => "React-Claude-Skill-Package",
-        "vite" => "Vite-Claude-Skill-Package",
-        "docker" => "Docker-Claude-Skill-Package",
-        "nextcloud" => "Nextcloud-Claude-Skill-Package",
-        "n8n" => "n8n-Claude-Skill-Package",
-        "pdfjs" => "PDFjs-Claude-Skill-Package",
-        "pdf-lib" => "pdf-lib-Claude-Skill-Package",
-        "fluent-i18n" => "Fluent-i18n-Claude-Skill-Package",
-        "drawio" => "Draw.io-Claude-Skill-Package",
-        "thatopen" => "ThatOpenCompany",
-        _ => &format!("{}-Claude-Skill-Package", id),
+        "blender-bonsai" => "Blender-Bonsai-ifcOpenshell-Sverchok-Claude-Skill-Package".to_string(),
+        "erpnext" => "ERPNext_Anthropic_Claude_Development_Skill_Package".to_string(),
+        "tauri-2" => "Tauri-2-Claude-Skill-Package".to_string(),
+        "solidjs" => "SolidJS-Claude-Skill-Package".to_string(),
+        "react" => "React-Claude-Skill-Package".to_string(),
+        "vite" => "Vite-Claude-Skill-Package".to_string(),
+        "docker" => "Docker-Claude-Skill-Package".to_string(),
+        "nextcloud" => "Nextcloud-Claude-Skill-Package".to_string(),
+        "n8n" => "n8n-Claude-Skill-Package".to_string(),
+        "pdfjs" => "PDFjs-Claude-Skill-Package".to_string(),
+        "pdf-lib" => "pdf-lib-Claude-Skill-Package".to_string(),
+        "fluent-i18n" => "Fluent-i18n-Claude-Skill-Package".to_string(),
+        "drawio" => "Draw.io-Claude-Skill-Package".to_string(),
+        "thatopen" => "ThatOpenCompany".to_string(),
+        _ => format!("{}-Claude-Skill-Package", id),
     }
-    .to_string()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

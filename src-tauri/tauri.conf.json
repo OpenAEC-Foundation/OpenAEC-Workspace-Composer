@@ -10,7 +10,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "OpenAEC Workspace Composer",
     "windows": [
       {
         "title": "OpenAEC Workspace Composer",

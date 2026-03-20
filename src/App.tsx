@@ -1,18 +1,23 @@
-import { createSignal, createMemo, Show } from "solid-js";
+import { createSignal, createMemo, Show, onMount } from "solid-js";
 import { Titlebar } from "./components/Titlebar";
 import { Sidebar } from "./components/Sidebar";
 import { SearchBar } from "./components/SearchBar";
+import { WorkflowTypeSelector } from "./components/WorkflowTypeSelector";
+import { PhaseOverview } from "./components/PhaseOverview";
 import { PresetSelector } from "./components/PresetSelector";
 import { PackageSelector } from "./components/PackageSelector";
+import { UpgradeConfig } from "./components/UpgradeConfig";
 import { WorkspaceConfig } from "./components/WorkspaceConfig";
 import { InstallPreview } from "./components/InstallPreview";
 import { StatusBar } from "./components/StatusBar";
 import { presets, type Preset } from "./lib/presets";
-import { type SkillPackage, packages } from "./lib/packages";
+import { type SkillPackage } from "./lib/packages";
+import { getWorkflowType, type WorkflowTypeId } from "./lib/workflows";
+import { getHardcodedRegistry, fetchRegistry, type RegistryPackage } from "./lib/registry";
 
-export type PageId = "home" | "packages" | "presets" | "settings" | "about";
+export type PageId = "home" | "packages" | "presets" | "workflows" | "settings" | "about";
 export type EffortLevel = "low" | "medium" | "high";
-export type FilterId = "aec-bim" | "erp-business" | "web-dev" | "devops" | "published" | "all";
+export type FilterId = "aec-bim" | "erp-business" | "web-dev" | "devops" | "published" | "anthropic" | "all";
 
 const availableFilters: { id: FilterId; label: string }[] = [
   { id: "all", label: "All" },
@@ -21,22 +26,71 @@ const availableFilters: { id: FilterId; label: string }[] = [
   { id: "web-dev", label: "Web Dev" },
   { id: "devops", label: "DevOps" },
   { id: "published", label: "Published" },
+  { id: "anthropic", label: "Anthropic" },
 ];
 
 export default function App() {
+  // Core state
   const [activePage, setActivePage] = createSignal<PageId>("home");
+  const [workflowType, setWorkflowType] = createSignal<WorkflowTypeId>("skill-package");
   const [selectedPreset, setSelectedPreset] = createSignal<Preset | null>(null);
-  const [selectedPackages, setSelectedPackages] = createSignal<string[]>([]);
   const [workspacePath, setWorkspacePath] = createSignal("");
   const [projectName, setProjectName] = createSignal("");
   const [installing, setInstalling] = createSignal(false);
+  const [effortLevel, setEffortLevel] = createSignal<EffortLevel>("medium");
+
+  // Skill package state
+  const [selectedPackages, setSelectedPackages] = createSignal<string[]>([]);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [activeFilters, setActiveFilters] = createSignal<FilterId[]>(["all"]);
-  const [effortLevel, setEffortLevel] = createSignal<EffortLevel>("medium");
+
+  // Live registry — starts with hardcoded, updates from GitHub
+  const [registryPackages, setRegistryPackages] = createSignal<RegistryPackage[]>(getHardcodedRegistry());
+  const [registryLoading, setRegistryLoading] = createSignal(false);
+
+  onMount(async () => {
+    setRegistryLoading(true);
+    try {
+      const live = await fetchRegistry();
+      setRegistryPackages(live);
+    } catch {
+      // Keep hardcoded fallback
+    } finally {
+      setRegistryLoading(false);
+    }
+  });
+
+  // Use registry packages as the source of truth
+  const packages = createMemo<SkillPackage[]>(() => registryPackages());
+
+  // Version upgrade state
+  const [sourceVersion, setSourceVersion] = createSignal("");
+  const [targetVersion, setTargetVersion] = createSignal("");
+  const [targetRepo, setTargetRepo] = createSignal("");
+
+  const currentWorkflow = createMemo(() => getWorkflowType(workflowType()));
+
+  const filteredPresets = createMemo(() =>
+    presets.filter((p) => p.workflowType === workflowType())
+  );
+
+  function handleWorkflowTypeChange(id: WorkflowTypeId) {
+    setWorkflowType(id);
+    setSelectedPreset(null);
+    setSelectedPackages([]);
+    setSourceVersion("");
+    setTargetVersion("");
+    setTargetRepo("");
+  }
 
   function handlePresetSelect(preset: Preset) {
     setSelectedPreset(preset);
-    setSelectedPackages(preset.packages);
+    if (preset.workflowType === "skill-package") {
+      setSelectedPackages(preset.packages);
+    } else {
+      setSourceVersion(preset.sourceVersion || "");
+      setTargetVersion(preset.targetVersion || "");
+    }
   }
 
   function togglePackage(id: string) {
@@ -77,16 +131,41 @@ export default function App() {
     }
   }
 
+  async function handleBrowseRepo() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({ directory: true, multiple: false });
+      if (selected) setTargetRepo(selected as string);
+    } catch {
+      const path = prompt("Target repository pad:");
+      if (path) setTargetRepo(path);
+    }
+  }
+
+  function canInstall(): boolean {
+    if (!workspacePath()) return false;
+    if (workflowType() === "skill-package") {
+      return selectedPackages().length > 0;
+    }
+    return sourceVersion() !== "" && targetVersion() !== "";
+  }
+
   async function handleInstall() {
-    if (!workspacePath() || selectedPackages().length === 0) return;
+    if (!canInstall()) return;
     setInstalling(true);
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("generate_workspace", {
-        path: workspacePath(),
-        name: projectName(),
-        packages: selectedPackages(),
-        effort: effortLevel(),
+        request: {
+          workflow_type: workflowType(),
+          path: workspacePath(),
+          name: projectName(),
+          effort: effortLevel(),
+          packages: workflowType() === "skill-package" ? selectedPackages() : undefined,
+          source_version: workflowType() === "version-upgrade" ? sourceVersion() : undefined,
+          target_version: workflowType() === "version-upgrade" ? targetVersion() : undefined,
+          target_repo: workflowType() === "version-upgrade" ? targetRepo() : undefined,
+        },
       });
     } catch (e) {
       console.error("Install failed:", e);
@@ -102,34 +181,56 @@ export default function App() {
         <Sidebar activePage={activePage()} onNavigate={setActivePage} />
         <div class="content">
           <Show when={activePage() === "home" || activePage() === "packages"}>
-            <div class="content-header">
-              <SearchBar
-                query={searchQuery()}
-                onQueryChange={setSearchQuery}
-                activeFilters={activeFilters()}
-                onFilterToggle={toggleFilter}
-                availableFilters={availableFilters}
-              />
-            </div>
+            <Show when={workflowType() === "skill-package"}>
+              <div class="content-header">
+                <SearchBar
+                  query={searchQuery()}
+                  onQueryChange={setSearchQuery}
+                  activeFilters={activeFilters()}
+                  onFilterToggle={toggleFilter}
+                  availableFilters={availableFilters}
+                />
+              </div>
+            </Show>
           </Show>
 
           <div class="content-body">
             <div class="content-scroll">
+              <Show when={activePage() === "home" || activePage() === "workflows"}>
+                <WorkflowTypeSelector
+                  selected={workflowType()}
+                  onSelect={handleWorkflowTypeChange}
+                />
+                <PhaseOverview phases={currentWorkflow().phases} />
+              </Show>
+
               <Show when={activePage() === "home" || activePage() === "presets"}>
                 <PresetSelector
-                  presets={presets}
+                  presets={filteredPresets()}
                   selected={selectedPreset()}
                   onSelect={handlePresetSelect}
                 />
               </Show>
 
-              <Show when={activePage() === "home" || activePage() === "packages"}>
+              <Show when={(activePage() === "home" || activePage() === "packages") && workflowType() === "skill-package"}>
                 <PackageSelector
-                  packages={packages}
+                  packages={packages()}
                   selected={selectedPackages()}
                   onToggle={togglePackage}
                   searchQuery={searchQuery()}
                   activeFilters={activeFilters()}
+                />
+              </Show>
+
+              <Show when={(activePage() === "home" || activePage() === "packages") && workflowType() === "version-upgrade"}>
+                <UpgradeConfig
+                  sourceVersion={sourceVersion()}
+                  targetVersion={targetVersion()}
+                  targetRepo={targetRepo()}
+                  onSourceVersionChange={setSourceVersion}
+                  onTargetVersionChange={setTargetVersion}
+                  onTargetRepoChange={setTargetRepo}
+                  onBrowseRepo={handleBrowseRepo}
                 />
               </Show>
 
@@ -149,9 +250,8 @@ export default function App() {
                 <div class="card">
                   <h2 class="card-title">About</h2>
                   <p class="text-dim" style={{ "margin-bottom": "8px" }}>
-                    <strong style={{ color: "var(--text-primary)" }}>OpenAEC Workspace Composer</strong> generates ready-to-use
-                    Claude Code workspaces with curated skill packages for AEC, BIM,
-                    ERP, and web development.
+                    <strong style={{ color: "var(--text-primary)" }}>OpenAEC Workspace Composer v2</strong> generates ready-to-use
+                    Claude Code workspaces. Supports skill package workspaces and version upgrade workflows.
                   </p>
                   <p class="text-muted" style={{ "font-size": "0.8rem" }}>
                     Built by OpenAEC Foundation with Tauri 2 + SolidJS.
@@ -162,17 +262,23 @@ export default function App() {
 
             <div class="install-panel">
               <InstallPreview
+                workflowType={workflowType()}
                 selectedPackages={selectedPackages()}
-                packages={packages}
+                packages={packages()}
                 installing={installing()}
+                canInstall={canInstall()}
                 onInstall={handleInstall}
                 onRemove={removePackage}
+                outputFiles={currentWorkflow().outputFiles}
               />
             </div>
           </div>
         </div>
       </div>
-      <StatusBar selectedCount={selectedPackages().length} />
+      <StatusBar
+        selectedCount={selectedPackages().length}
+        workflowType={workflowType()}
+      />
     </div>
   );
 }

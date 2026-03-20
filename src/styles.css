@@ -1697,3 +1697,176 @@ a:hover {
 .effort-btn.active strong {
   color: var(--accent);
 }
+
+/* ============================================================
+   Workflow Type Selector
+   ============================================================ */
+
+.workflow-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+.workflow-type-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-type-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--workflow-color, var(--accent));
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.workflow-type-card:hover {
+  border-color: var(--workflow-color, var(--accent));
+  box-shadow: 0 0 16px rgba(217, 119, 6, 0.08);
+  transform: translateY(-1px);
+}
+
+.workflow-type-card.selected {
+  border-color: var(--workflow-color, var(--accent));
+  box-shadow: 0 0 0 1px var(--workflow-color, var(--accent)),
+              0 0 20px rgba(217, 119, 6, 0.12);
+}
+
+.workflow-type-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  color: var(--workflow-color, var(--accent));
+}
+
+.workflow-type-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workflow-type-info strong {
+  font-family: var(--font-heading);
+  font-size: 0.925rem;
+  font-weight: 500;
+}
+
+.workflow-type-info small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Phase Overview Timeline
+   ============================================================ */
+
+.phase-timeline {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: var(--sp-2);
+}
+
+.phase-timeline::-webkit-scrollbar {
+  height: 4px;
+}
+
+.phase-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  min-width: 140px;
+  flex-shrink: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--border);
+}
+
+.phase-number {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.phase-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.phase-info strong {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.phase-info small {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+}
+
+/* ============================================================
+   Upgrade Config
+   ============================================================ */
+
+.form-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.input-with-button {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.input-with-button .form-input {
+  flex: 1;
+}
+
+/* ============================================================
+   Workflow Badge (StatusBar)
+   ============================================================ */
+
+.statusbar-workflow-badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}

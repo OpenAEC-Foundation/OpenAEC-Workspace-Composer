@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "check": "node scripts/check-prerequisites.js",
+    "tauri": "tauri",
+    "tauri:dev": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
+    "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build"
   },
   "keywords": ["claude", "workspace", "skill-packages", "openaec", "tauri", "solidjs"],
   "author": "OpenAEC Foundation",

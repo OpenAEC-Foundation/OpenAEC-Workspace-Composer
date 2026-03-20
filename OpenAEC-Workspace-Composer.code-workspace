@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"name": "Composer",
+			"path": "."
+		},
+		{
+			"name": "Tauri-2 [skills]",
+			"path": "../Tauri-2-Claude-Skill-Package/skills"
+		},
+		{
+			"name": "SolidJS [skills]",
+			"path": "../SolidJS-Claude-Skill-Package/skills"
+		},
+		{
+			"name": "Vite [skills]",
+			"path": "../Vite-Claude-Skill-Package/skills"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"CLAUDE.md": "markdown",
+			"SKILL.md": "markdown"
+		}
+	}
+}

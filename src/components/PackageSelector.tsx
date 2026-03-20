@@ -16,15 +16,19 @@ export function PackageSelector(props: Props) {
     const q = props.searchQuery.toLowerCase().trim();
     const filters = props.activeFilters;
 
-    // Apply category / status filters
+    // Apply category / status / publisher filters
     if (!filters.includes("all")) {
       pkgs = pkgs.filter((pkg) => {
         const categoryMatch = filters.some(
-          (f) => f !== "published" && f === pkg.category
+          (f) => f !== "published" && f !== "anthropic" && f === pkg.category
         );
         const publishedMatch =
           filters.includes("published" as FilterId) && pkg.status === "published";
-        const hasCategory = filters.some((f) => f !== "published");
+        const anthropicMatch =
+          filters.includes("anthropic" as FilterId) && "publisher" in pkg && (pkg as any).publisher === "anthropic";
+        const hasCategory = filters.some((f) => f !== "published" && f !== "anthropic");
+
+        if (anthropicMatch) return true;
         if (!hasCategory) return publishedMatch;
         if (!filters.includes("published" as FilterId)) return categoryMatch;
         return categoryMatch && publishedMatch;

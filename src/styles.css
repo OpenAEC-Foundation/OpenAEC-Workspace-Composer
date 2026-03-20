@@ -2434,3 +2434,216 @@ a:hover {
 .btn-success:hover {
   background: var(--success-strong);
 }
+
+/* ============================================================
+   Animations — Float, Bounce, Stagger, Glow
+   ============================================================ */
+
+/* Gentle floating effect */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Soft bounce on entry */
+@keyframes bounce-in {
+  0% { transform: scale(0.9) translateY(10px); opacity: 0; }
+  60% { transform: scale(1.02) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Slide up with fade */
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Subtle glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+  50% { box-shadow: 0 0 20px 2px rgba(217, 119, 6, 0.15); }
+}
+
+/* Shimmer across surface */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Cards — bounce in with stagger */
+.card {
+  animation: bounce-in 0.4s ease-out both;
+}
+
+.content-scroll > .card:nth-child(1) { animation-delay: 0ms; }
+.content-scroll > .card:nth-child(2) { animation-delay: 60ms; }
+.content-scroll > .card:nth-child(3) { animation-delay: 120ms; }
+.content-scroll > .card:nth-child(4) { animation-delay: 180ms; }
+.content-scroll > .card:nth-child(5) { animation-delay: 240ms; }
+.content-scroll > *:nth-child(n+6) .card,
+.content-scroll > .card:nth-child(n+6) { animation-delay: 300ms; }
+
+/* Preset cards — float on hover */
+.preset-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.preset-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--accent);
+}
+
+.preset-card.active,
+.preset-card:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* Package items — slide in */
+.package-item {
+  animation: slide-up 0.3s ease-out both;
+}
+
+.package-item:nth-child(1) { animation-delay: 0ms; }
+.package-item:nth-child(2) { animation-delay: 30ms; }
+.package-item:nth-child(3) { animation-delay: 60ms; }
+.package-item:nth-child(4) { animation-delay: 90ms; }
+.package-item:nth-child(5) { animation-delay: 120ms; }
+.package-item:nth-child(n+6) { animation-delay: 150ms; }
+
+.package-item:hover {
+  transform: translateX(4px);
+  transition: transform 0.2s ease;
+}
+
+/* Sidebar nav items — subtle hover lift */
+.sidebar-nav-item {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sidebar-nav-item:hover {
+  transform: translateX(3px);
+}
+
+.sidebar-nav-item.active {
+  transform: translateX(2px);
+}
+
+/* Sidebar brand — gentle float */
+.sidebar-brand-logo {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Buttons — bounce on press */
+.btn {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.3);
+}
+
+/* Status dots — pulse when active */
+.statusbar-dot {
+  transition: background 0.3s ease;
+}
+
+.statusbar-dot.installing {
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* Sync session cards — enter with bounce */
+.sync-session-card {
+  animation: bounce-in 0.35s ease-out both;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+}
+
+.sync-session-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+/* Progress bar fill — animated shimmer overlay */
+.progress-bar-fill {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--warm-gold) 50%,
+    var(--accent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Quick action cards on dashboard */
+.content-scroll > div[style] > a.card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.content-scroll > div[style] > a.card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--accent);
+}
+
+/* Sidebar badge — bounce in */
+.sidebar-badge {
+  animation: bounce-in 0.3s ease-out;
+}
+
+/* Search/filter bar — slide down */
+.content-header {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Stats — counter grow effect */
+.stat-value {
+  transition: transform 0.3s ease;
+}
+
+.stat:hover .stat-value {
+  transform: scale(1.15);
+}
+
+/* Empty state illustrations — float */
+.empty-state svg {
+  animation: float 3s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+/* ============================================================
+   Selection Bar (sticky bottom bar on pages)
+   ============================================================ */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.selection-bar-info {
+  font-size: 0.8125rem;
+}
+
+.selection-bar-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,7 +1,8 @@
-import { Show, createMemo, onMount } from "solid-js";
+import { Show, For, createMemo, onMount } from "solid-js";
+import { A } from "@solidjs/router";
 import { SearchBar } from "../components/SearchBar";
 import { PackageSelector } from "../components/PackageSelector";
-import { packagesStore, availableFilters } from "../stores/packages.store";
+import { packagesStore } from "../stores/packages.store";
 
 export function PackagesPage() {
   onMount(() => {
@@ -19,51 +20,40 @@ export function PackagesPage() {
     return `${count} packages from GitHub \u2014 ${timeStr}`;
   });
 
+  const selectedCount = createMemo(() => packagesStore.selectedPackages().length);
+  const totalSkills = createMemo(() => packagesStore.totalSkills());
+
   return (
-    <div class="content-body">
-      <div class="content-scroll">
-        {/* Registry status indicator */}
-        <div style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "var(--sp-2)",
-          "margin-bottom": "var(--sp-3)",
-          "font-size": "0.75rem",
-          color: "var(--text-muted)",
-        }}>
-          <span
-            class="statusbar-dot"
-            style={{
-              background: packagesStore.registryLoading()
-                ? "var(--warm-gold)"
-                : packagesStore.registryError()
-                ? "var(--error)"
-                : "var(--success)",
-            }}
-          />
-          <span>{registryStatusText()}</span>
-          <Show when={!packagesStore.registryLoading()}>
-            <button
-              class="btn btn-ghost"
-              style={{ padding: "2px 6px", "font-size": "0.7rem" }}
-              onClick={() => packagesStore.loadRegistry(true)}
-            >
-              Refresh
-            </button>
-          </Show>
-        </div>
+    <div class="page">
+      {/* Registry status */}
+      <div class="registry-status">
+        <span
+          class={`dot ${packagesStore.registryLoading() ? "loading" : packagesStore.registryError() ? "error" : ""}`}
+        />
+        <span>{registryStatusText()}</span>
+        <Show when={!packagesStore.registryLoading()}>
+          <button
+            class="btn btn-ghost"
+            style={{ padding: "2px 6px", "font-size": "0.7rem" }}
+            onClick={() => packagesStore.loadRegistry(true)}
+          >
+            Refresh
+          </button>
+        </Show>
+      </div>
 
-        {/* Search & filter bar */}
-        <div class="content-header">
-          <SearchBar
-            query={packagesStore.searchQuery()}
-            onQueryChange={packagesStore.setSearchQuery}
-            activeFilters={packagesStore.activeFilters()}
-            onFilterToggle={packagesStore.toggleFilter}
-          />
-        </div>
+      {/* Search & filter */}
+      <div class="content-header">
+        <SearchBar
+          query={packagesStore.searchQuery()}
+          onQueryChange={packagesStore.setSearchQuery}
+          activeFilters={packagesStore.activeFilters()}
+          onFilterToggle={packagesStore.toggleFilter}
+        />
+      </div>
 
-        {/* Package selector */}
+      {/* Package selector */}
+      <div style={{ flex: "1", overflow: "auto", padding: "var(--sp-4) var(--sp-5)" }}>
         <PackageSelector
           packages={packagesStore.registryPackages()}
           selected={packagesStore.selectedPackages()}
@@ -72,6 +62,27 @@ export function PackagesPage() {
           activeFilters={packagesStore.activeFilters()}
         />
       </div>
+
+      {/* Selection summary + next step */}
+      <Show when={selectedCount() > 0}>
+        <div class="selection-bar">
+          <div class="selection-bar-info">
+            <strong>{selectedCount()} package{selectedCount() !== 1 ? "s" : ""}</strong>
+            <span class="text-dim"> selected</span>
+            <span class="text-muted" style={{ "margin-left": "var(--sp-2)" }}>
+              ({totalSkills()} skills)
+            </span>
+          </div>
+          <div class="selection-bar-actions">
+            <button class="btn btn-ghost btn-sm" onClick={() => packagesStore.clearSelection()}>
+              Clear
+            </button>
+            <A href="/workspace" class="btn btn-primary btn-sm">
+              Configure Workspace →
+            </A>
+          </div>
+        </div>
+      </Show>
     </div>
   );
 }

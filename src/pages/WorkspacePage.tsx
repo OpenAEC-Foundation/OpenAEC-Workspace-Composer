@@ -1,4 +1,5 @@
 import { Show, For, createMemo, createSignal, onMount, onCleanup } from "solid-js";
+import { A } from "@solidjs/router";
 import { WorkflowTypeSelector } from "../components/WorkflowTypeSelector";
 import { PresetSelector } from "../components/PresetSelector";
 import { UpgradeConfig } from "../components/UpgradeConfig";
@@ -18,28 +19,21 @@ export function WorkspacePage() {
   const [newFolderName, setNewFolderName] = createSignal("");
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // Load recent workspaces on mount
   onMount(async () => {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const recent = await invoke<string[]>("list_recent_workspaces");
       workspaceStore.setRecentWorkspaces(recent);
-    } catch {
-      // Not running in Tauri or no recent workspaces
-    }
+    } catch {}
   });
 
   onCleanup(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
   });
 
-  // Debounced path validation
   function debouncedValidate(path: string) {
     if (debounceTimer) clearTimeout(debounceTimer);
-    if (!path) {
-      workspaceStore.setPathValidation(null);
-      return;
-    }
+    if (!path) { workspaceStore.setPathValidation(null); return; }
     debounceTimer = setTimeout(() => validatePath(path), 300);
   }
 
@@ -48,9 +42,7 @@ export function WorkspacePage() {
       const { invoke } = await import("@tauri-apps/api/core");
       const result = await invoke<PathValidation>("validate_path", { path });
       workspaceStore.setPathValidation(result);
-    } catch {
-      workspaceStore.setPathValidation(null);
-    }
+    } catch { workspaceStore.setPathValidation(null); }
   }
 
   function handlePathChange(path: string) {
@@ -65,9 +57,7 @@ export function WorkspacePage() {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("create_directory", { path });
       await validatePath(path);
-    } catch (e) {
-      console.error("Failed to create directory:", e);
-    }
+    } catch (e) { console.error("Failed to create directory:", e); }
   }
 
   async function handleCreateSubfolder() {
@@ -82,9 +72,7 @@ export function WorkspacePage() {
       setNewFolderName("");
       setShowNewFolder(false);
       await validatePath(fullPath);
-    } catch (e) {
-      console.error("Failed to create subfolder:", e);
-    }
+    } catch (e) { console.error("Failed to create subfolder:", e); }
   }
 
   async function handleSelectRecent(path: string) {
@@ -118,10 +106,7 @@ export function WorkspacePage() {
       }
     } catch {
       const path = prompt("Workspace pad:");
-      if (path) {
-        workspaceStore.setWorkspacePath(path);
-        debouncedValidate(path);
-      }
+      if (path) { workspaceStore.setWorkspacePath(path); debouncedValidate(path); }
     }
   }
 
@@ -137,31 +122,90 @@ export function WorkspacePage() {
   }
 
   const validation = () => workspaceStore.pathValidation();
-
   const pathIsValid = createMemo(() => {
     const v = validation();
     return v !== null && v.exists && v.is_dir && v.is_writable;
   });
+  const selectedCount = createMemo(() => packagesStore.selectedPackages().length);
+  const canProceed = createMemo(() => {
+    if (!pathIsValid()) return false;
+    if (workspaceStore.workflowType() === "skill-package") return selectedCount() > 0;
+    return workspaceStore.sourceVersion() !== "" && workspaceStore.targetVersion() !== "";
+  });
 
   return (
-    <div class="content-body">
-      <div class="content-scroll">
-        {/* Workflow type selection */}
+    <div class="page">
+      <div class="page-header">
+        <h1>Workspace Setup</h1>
+        <p>Choose a workflow, select packages, and configure your workspace location.</p>
+      </div>
+
+      <div style={{ overflow: "auto", flex: "1", padding: "0 0 var(--sp-6) 0" }}>
+        {/* Workflow type */}
         <WorkflowTypeSelector
           selected={workspaceStore.workflowType()}
           onSelect={handleWorkflowTypeChange}
         />
 
-        {/* Preset selection */}
+        {/* Quick presets */}
         <PresetSelector
           presets={filteredPresets()}
           selected={packagesStore.selectedPreset()}
           onSelect={handlePresetSelect}
         />
 
-        {/* Workspace path configuration */}
+        {/* Selected packages summary */}
+        <Show when={workspaceStore.workflowType() === "skill-package"}>
+          <div class="card">
+            <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "var(--sp-3)" }}>
+              <h2 class="card-title" style={{ "margin-bottom": "0" }}>
+                Selected Packages
+                <Show when={selectedCount() > 0}>
+                  <span class="sidebar-badge" style={{ "margin-left": "var(--sp-2)" }}>{selectedCount()}</span>
+                </Show>
+              </h2>
+              <A href="/packages" class="btn btn-ghost btn-sm">
+                Browse Packages →
+              </A>
+            </div>
+            <Show
+              when={selectedCount() > 0}
+              fallback={
+                <div style={{ padding: "var(--sp-4)", "text-align": "center", color: "var(--text-muted)" }}>
+                  <p>No packages selected yet.</p>
+                  <A href="/packages" class="btn btn-secondary" style={{ "margin-top": "var(--sp-2)" }}>
+                    Browse Package Registry
+                  </A>
+                </div>
+              }
+            >
+              <div style={{ display: "flex", "flex-wrap": "wrap", gap: "var(--sp-1)" }}>
+                <For each={packagesStore.selectedPackageObjects()}>
+                  {(pkg) => (
+                    <span class="tag" style={{ display: "inline-flex", "align-items": "center", gap: "4px", padding: "4px 8px" }}>
+                      {pkg.name}
+                      <span class="text-muted" style={{ "font-size": "0.7rem" }}>({pkg.skillCount})</span>
+                      <button
+                        class="btn btn-ghost"
+                        style={{ padding: "0 2px", "min-width": "auto", "font-size": "0.7rem", "line-height": "1" }}
+                        onClick={() => packagesStore.removePackage(pkg.id)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                </For>
+              </div>
+              <div class="text-muted" style={{ "margin-top": "var(--sp-2)", "font-size": "0.75rem" }}>
+                {packagesStore.totalSkills()} skills total
+              </div>
+            </Show>
+          </div>
+        </Show>
+
+        {/* Workspace path */}
         <div class="card">
-          <h2 class="card-title">Workspace Path</h2>
+          <h2 class="card-title">Workspace Location</h2>
 
           <div class="form-group">
             <label class="form-label">Project Name</label>
@@ -185,18 +229,13 @@ export function WorkspacePage() {
                 onInput={(e) => handlePathChange(e.currentTarget.value)}
                 onPaste={(e) => {
                   const text = e.clipboardData?.getData("text");
-                  if (text) {
-                    e.preventDefault();
-                    handlePathChange(text.trim());
-                  }
+                  if (text) { e.preventDefault(); handlePathChange(text.trim()); }
                 }}
               />
-              <button class="btn btn-ghost" onClick={handleBrowse}>
-                Browse
-              </button>
+              <button class="btn btn-ghost" onClick={handleBrowse}>Browse</button>
             </div>
 
-            {/* Path validation indicators */}
+            {/* Path validation */}
             <Show when={workspaceStore.workspacePath()}>
               <Show when={validation()} fallback={
                 <div class="path-validation">
@@ -237,24 +276,15 @@ export function WorkspacePage() {
                         <span class="message warning">Has existing .claude config</span>
                       </div>
                     </Show>
-                    <Show when={v().has_workspace_file}>
-                      <div class="path-validation">
-                        <span class="dot warning" />
-                        <span class="message warning">Has existing .code-workspace file</span>
-                      </div>
-                    </Show>
                   </>
                 )}
               </Show>
             </Show>
 
-            {/* New folder creation */}
+            {/* New folder */}
             <div style={{ "margin-top": "var(--sp-2)" }}>
               <Show when={!showNewFolder()}>
-                <button
-                  class="btn btn-ghost btn-sm"
-                  onClick={() => setShowNewFolder(true)}
-                >
+                <button class="btn btn-ghost btn-sm" onClick={() => setShowNewFolder(true)}>
                   + Create New Folder
                 </button>
               </Show>
@@ -271,42 +301,25 @@ export function WorkspacePage() {
                       if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); }
                     }}
                   />
-                  <button class="btn btn-primary btn-sm" onClick={handleCreateSubfolder}>
-                    Create
-                  </button>
-                  <button
-                    class="btn btn-ghost btn-sm"
-                    onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}
-                  >
-                    Cancel
-                  </button>
+                  <button class="btn btn-primary btn-sm" onClick={handleCreateSubfolder}>Create</button>
+                  <button class="btn btn-ghost btn-sm" onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}>Cancel</button>
                 </div>
               </Show>
             </div>
           </div>
 
-          {/* Effort level selector */}
+          {/* Effort level */}
           <div class="form-group" style={{ "margin-top": "var(--sp-3)" }}>
             <label class="form-label">Effort Level</label>
             <div style={{ display: "flex", gap: "var(--sp-2)" }}>
-              <button
-                class={`btn ${workspaceStore.effortLevel() === "low" ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => workspaceStore.setEffortLevel("low")}
-              >
-                Low
-              </button>
-              <button
-                class={`btn ${workspaceStore.effortLevel() === "medium" ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => workspaceStore.setEffortLevel("medium")}
-              >
-                Medium
-              </button>
-              <button
-                class={`btn ${workspaceStore.effortLevel() === "high" ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => workspaceStore.setEffortLevel("high")}
-              >
-                High
-              </button>
+              {(["low", "medium", "high"] as const).map((level) => (
+                <button
+                  class={`btn ${workspaceStore.effortLevel() === level ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => workspaceStore.setEffortLevel(level)}
+                >
+                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -328,7 +341,7 @@ export function WorkspacePage() {
           </div>
         </Show>
 
-        {/* Version upgrade config (conditional) */}
+        {/* Version upgrade config */}
         <Show when={workspaceStore.workflowType() === "version-upgrade"}>
           <UpgradeConfig
             sourceVersion={workspaceStore.sourceVersion()}
@@ -340,6 +353,28 @@ export function WorkspacePage() {
             onBrowseRepo={handleBrowseRepo}
           />
         </Show>
+      </div>
+
+      {/* Bottom action bar */}
+      <div class="selection-bar">
+        <div class="selection-bar-info">
+          <Show when={pathIsValid()} fallback={<span class="text-muted">Select a workspace path to continue</span>}>
+            <Show
+              when={workspaceStore.workflowType() === "skill-package" && selectedCount() === 0}
+              fallback={<span class="text-dim">Ready to configure</span>}
+            >
+              <span class="text-muted">Select packages to continue</span>
+            </Show>
+          </Show>
+        </div>
+        <div class="selection-bar-actions">
+          <A href="/configure" class={`btn ${canProceed() ? "btn-primary" : "btn-secondary"}`}>
+            Configure Settings →
+          </A>
+          <A href="/install" class={`btn ${canProceed() ? "btn-generate" : "btn-secondary"}`}>
+            Review & Install →
+          </A>
+        </div>
       </div>
     </div>
   );

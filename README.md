@@ -1,98 +1,110 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a1a2e,25:16213e,50:0f3460,75:533483,100:e94560&height=280&section=header&text=OpenAEC%20Workspace%20Composer&fontSize=52&fontColor=ffffff&fontAlignY=38&animation=fadeIn&desc=Compose%20Claude%20Code%20workspaces%20met%20curated%20skill%20packages&descAlignY=56&descSize=20&descFontColor=cccccc" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:36363E,30:D97706,60:F59E0B,100:EA580C&height=260&section=header&text=Workspace%20Composer&fontSize=60&fontColor=ffffff&fontAlignY=38&animation=fadeIn&desc=Compose%20Claude%20Code%20workspaces%20with%20curated%20skill%20packages&descAlignY=56&descSize=18&descFontColor=ffffffcc" width="100%"/>
 
 <br/>
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&pause=1200&color=E94560&center=true&vCenter=true&width=800&height=60&lines=One+click+%E2%86%92+fully+configured+Claude+Code+workspace;23+skill+packages+%7C+5+curated+presets;CLAUDE.md+%2B+MCP+settings+%2B+hooks+%2B+permissions;Progressive+disclosure+met+CORE-documenten;Van+zero+naar+productive+in+60+seconden" />
+<img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=22&pause=1200&color=D97706&center=true&vCenter=true&width=800&height=60&lines=One+click+%E2%86%92+fully+configured+Claude+Code+workspace;23+skill+packages+%7C+350%2B+skills+%7C+5+presets;CLAUDE.md+%2B+MCP+servers+%2B+hooks+%2B+commands;Progressive+disclosure+met+CORE-documenten;Van+zero+naar+productive+in+60+seconden" />
 
 <br/>
 
-![Version](https://img.shields.io/badge/version-1.0.0-E94560?style=for-the-badge)
-![Packages](https://img.shields.io/badge/skill_packages-23-533483?style=for-the-badge)
-![Presets](https://img.shields.io/badge/presets-5-0f3460?style=for-the-badge)
-![Tauri](https://img.shields.io/badge/Tauri_2-24C8D8?style=for-the-badge&logo=tauri&logoColor=white)
-![SolidJS](https://img.shields.io/badge/SolidJS-4f88c6?style=for-the-badge&logo=solid&logoColor=white)
-![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-16A34A?style=for-the-badge)
+<a href="#quick-start"><img src="https://img.shields.io/badge/version-1.0.0-D97706?style=flat-square" alt="Version"></a>
+<a href="#skill-packages"><img src="https://img.shields.io/badge/skill_packages-23-D97706?style=flat-square" alt="Packages"></a>
+<a href="#presets"><img src="https://img.shields.io/badge/presets-5-D97706?style=flat-square" alt="Presets"></a>
+<a href="https://v2.tauri.app"><img src="https://img.shields.io/badge/Tauri_2-36363E?style=flat-square&logo=tauri&logoColor=24C8D8" alt="Tauri"></a>
+<a href="https://www.solidjs.com"><img src="https://img.shields.io/badge/SolidJS-36363E?style=flat-square&logo=solid&logoColor=4f88c6" alt="SolidJS"></a>
+<a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-36363E?style=flat-square&logo=rust&logoColor=white" alt="Rust"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D97706?style=flat-square" alt="License"></a>
+<a href="https://github.com/OpenAEC-Foundation/OpenAEC-Workspace-Composer/issues"><img src="https://img.shields.io/badge/contributions-welcome-D97706?style=flat-square" alt="Contributions"></a>
 
-<br/>
+<br/><br/>
 
-![Skills](https://img.shields.io/badge/350%2B_skills-beschikbaar-E94560?style=flat-square&labelColor=1a1a2e)
-![AEC/BIM](https://img.shields.io/badge/AEC%2FBIM-4_packages-0f3460?style=flat-square&labelColor=1a1a2e)
-![ERP](https://img.shields.io/badge/ERP-3_packages-533483?style=flat-square&labelColor=1a1a2e)
-![Web](https://img.shields.io/badge/Web_Dev-7_packages-16213e?style=flat-square&labelColor=1a1a2e)
-![DevOps](https://img.shields.io/badge/DevOps-2_packages-e94560?style=flat-square&labelColor=1a1a2e)
+**Stel in seconden een volledig geconfigureerde Claude Code workspace samen — met skill packages, projectinstructies, MCP servers, hooks, commands en permissions.**
 
-<br/>
-
-**Stel in seconden een volledig geconfigureerde Claude Code workspace samen — met skill packages, projectinstructies, MCP servers, hooks en permissions.**
+*Build free. Build together.*
 
 </div>
 
 ---
 
-## Het Probleem
+## About
+
+**Workspace Composer** is een desktop applicatie van de [OpenAEC Foundation](https://github.com/OpenAEC-Foundation) waarmee je in één klik een volledig ingerichte Claude Code workspace genereert. Kies een preset of stel zelf packages samen — de app genereert alle configuratie die je nodig hebt om direct productief te zijn.
+
+### Het probleem
 
 Een Claude Code workspace goed inrichten kost tijd. Je moet handmatig:
-- `CLAUDE.md` projectinstructies schrijven
-- `settings.local.json` met permissions configureren
-- MCP servers koppelen
-- Skill packages installeren en als workspace folders toevoegen
-- CORE-documenten en hooks instellen voor progressive disclosure
-- `.code-workspace` bestanden met de juiste structuur aanmaken
+
+- `CLAUDE.md` projectinstructies schrijven met conventies en architectuur
+- `settings.local.json` configureren met permissions en hooks
+- MCP servers koppelen via `.mcp.json`
+- Skill packages installeren als workspace folders
+- CORE-documenten inrichten voor progressive disclosure
+- Custom commands en slash commands toevoegen
+- `.code-workspace` bestanden met de juiste structuur samenstellen
 
 **Workspace Composer doet dit allemaal in één klik.**
 
 ---
 
-## Wat het doet
+## Hoe het werkt
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  Workspace Composer                     │
-│                                                         │
-│  ┌─────────┐   ┌──────────────┐   ┌──────────────────┐ │
-│  │ Preset   │ + │ Losse        │ → │ Generated Output │ │
-│  │ kiezen   │   │ packages     │   │                  │ │
-│  │          │   │ toevoegen    │   │ .code-workspace  │ │
-│  │ BIM Dev  │   │              │   │ CLAUDE.md        │ │
-│  │ ERP Full │   │ ☑ Tauri 2    │   │ settings.json    │ │
-│  │ Web Full │   │ ☑ Docker     │   │ .mcp.json        │ │
-│  │ PDF      │   │ ☑ SolidJS    │   │ hooks config     │ │
-│  │ AEC-GIS  │   │ ☐ React      │   │ .gitignore       │ │
-│  └─────────┘   └──────────────┘   └──────────────────┘ │
-└─────────────────────────────────────────────────────────┘
+│                  Workspace Composer                      │
+│                                                          │
+│  ┌─────────┐   ┌──────────────┐   ┌──────────────────┐  │
+│  │ Preset   │ + │ Losse        │ → │ Generated Output  │  │
+│  │ kiezen   │   │ packages     │   │                   │  │
+│  │          │   │ toevoegen    │   │ .code-workspace   │  │
+│  │ BIM Dev  │   │              │   │ CLAUDE.md         │  │
+│  │ ERP Full │   │ ☑ Tauri 2    │   │ settings.json     │  │
+│  │ Web Full │   │ ☑ Docker     │   │ .mcp.json         │  │
+│  │ PDF      │   │ ☑ SolidJS    │   │ hooks & commands  │  │
+│  │ AEC-GIS  │   │ ☐ React      │   │ .gitignore        │  │
+│  └─────────┘   └──────────────┘   └──────────────────┘  │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Generated workspace bevat:
+### Wat er gegenereerd wordt
 
 | Bestand | Doel |
 |---------|------|
 | `.code-workspace` | Multi-root workspace met skill package folders |
 | `CLAUDE.md` | Projectinstructies + actieve package documentatie |
-| `.claude/settings.local.json` | Permissions (Bash, Read, Write, Edit, tools) |
+| `.claude/settings.local.json` | Permissions, hooks en tool configuratie |
 | `.mcp.json` | MCP server configuratie voor de workspace |
+| `.claude/commands/` | Custom slash commands per package |
 | `.gitignore` | Met `PROMPTS.md` privacy-bescherming |
 
 ---
 
 ## CORE-documenten & Progressive Disclosure
 
-De Workspace Composer configureert een **progressive disclosure** systeem via CORE-documenten en hooks:
+Workspace Composer configureert een **progressive disclosure** systeem — Claude laadt alleen de context die op dat moment relevant is:
 
 ```
 Workspace Root
-├── CLAUDE.md              ← Altijd geladen: project identiteit & conventies
-├── PROMPTS.md             ← Privé prompt-historie (nooit committen)
+├── CLAUDE.md                  ← Altijd geladen: identiteit, conventies, architectuur
+├── PROMPTS.md                 ← Privé prompt-historie (nooit committen)
 ├── .claude/
-│   ├── settings.local.json  ← Permissions & hooks
-│   └── MEMORY.md           ← Persistent memory index
+│   ├── settings.local.json    ← Permissions, hooks & event triggers
+│   ├── commands/              ← Custom slash commands
+│   └── MEMORY.md              ← Persistent memory index
+├── .mcp.json                  ← MCP server configuratie
 └── [skill-package]/
-    └── SKILL.md             ← Package-specifieke instructies
+    └── SKILL.md               ← Package-specifieke instructies & skills
 ```
 
-> **Progressive disclosure**: Claude leest alleen wat relevant is op het moment dat het nodig is. CLAUDE.md geeft de basis, hooks triggeren diepere context, en CORE-documenten bevatten de gedetailleerde kennis per domein — pas geladen wanneer een skill wordt aangesproken.
+**Hoe progressive disclosure werkt:**
+
+1. **CLAUDE.md** is het startpunt — altijd geladen, bevat de basis
+2. **Hooks** triggeren op events en laden diepere context wanneer nodig
+3. **SKILL.md** bestanden bevatten domeinkennis per package — alleen geladen wanneer aangesproken
+4. **PROMPTS.md** houdt privé prompt-historie bij (geconfigureerd vanuit global level via `~/.claude/CLAUDE.md`)
+5. **Commands** bieden snelkoppelingen voor veelgebruikte workflows
+
+> Net zoals `PROMPTS.md` vanuit global `CLAUDE.md` wordt ingesteld en in elke workspace automatisch wordt bijgehouden, zo configureert de Composer vergelijkbare CORE-mechanismen op workspace level.
 
 ---
 
@@ -146,7 +158,7 @@ Workspace Root
 
 **Open PDF Studio**
 
-![Skills](https://img.shields.io/badge/138_skills-e74c3c?style=flat-square)
+![Skills](https://img.shields.io/badge/138_skills-D97706?style=flat-square)
 
 Tauri + SolidJS + PDF.js + pdf-lib + Fluent i18n + Vite
 
@@ -155,7 +167,7 @@ Tauri + SolidJS + PDF.js + pdf-lib + Fluent i18n + Vite
 
 **BIM Development**
 
-![Skills](https://img.shields.io/badge/102_skills-3498db?style=flat-square)
+![Skills](https://img.shields.io/badge/102_skills-D97706?style=flat-square)
 
 Blender-Bonsai + ThatOpen + Docker
 
@@ -164,7 +176,7 @@ Blender-Bonsai + ThatOpen + Docker
 
 **ERPNext Fullstack**
 
-![Skills](https://img.shields.io/badge/117_skills-2ecc71?style=flat-square)
+![Skills](https://img.shields.io/badge/117_skills-D97706?style=flat-square)
 
 ERPNext + Nextcloud + Docker + n8n + React
 
@@ -173,7 +185,7 @@ ERPNext + Nextcloud + Docker + n8n + React
 
 **AEC-GIS-BIM**
 
-![Skills](https://img.shields.io/badge/138_skills-9b59b6?style=flat-square)
+![Skills](https://img.shields.io/badge/138_skills-D97706?style=flat-square)
 
 Blender-Bonsai + Speckle + QGIS + Three.js
 
@@ -182,7 +194,7 @@ Blender-Bonsai + Speckle + QGIS + Three.js
 
 **Web Fullstack**
 
-![Skills](https://img.shields.io/badge/107_skills-f39c12?style=flat-square)
+![Skills](https://img.shields.io/badge/107_skills-D97706?style=flat-square)
 
 React + Vite + Docker + SolidJS
 
@@ -223,33 +235,18 @@ npm run tauri build
 
 ## Stack
 
-```
-Frontend                    Backend
-├── SolidJS 1.9             ├── Rust
-├── TypeScript 5.7          ├── Tauri 2.10
-├── Vite 8                  ├── tauri-plugin-dialog
-├── Solid Router 0.15       └── tauri-plugin-shell
-└── Custom design system
-```
-
----
-
-## OpenAEC Foundation
-
-<div align="center">
-
-Dit project is onderdeel van de **[OpenAEC Foundation](https://github.com/OpenAEC-Foundation)** — een open-source initiatief voor het delen van AI-gestuurde skill packages in de AEC-industrie en daarbuiten.
-
-[![OpenAEC](https://img.shields.io/badge/OpenAEC-Foundation-533483?style=for-the-badge&logo=github&logoColor=white)](https://github.com/OpenAEC-Foundation)
-[![Open Agents](https://img.shields.io/badge/Open-Agents-E94560?style=for-the-badge&logo=github&logoColor=white)](https://github.com/OpenAEC-Foundation/open-agents)
-
-</div>
+| Layer | Technologie |
+|-------|-------------|
+| **Frontend** | SolidJS 1.9 · TypeScript 5.7 · Vite 8 · Solid Router |
+| **Backend** | Rust · Tauri 2.10 |
+| **Plugins** | tauri-plugin-dialog (file picker) · tauri-plugin-shell (VS Code launcher) |
+| **Design** | OpenAEC Design System · Construction Amber `#D97706` · Deep Forge `#36363E` |
 
 ---
 
 ## Bijdragen
 
-Bijdragen zijn welkom! Of het nu gaat om nieuwe skill packages, presets, bugfixes of documentatie.
+Bijdragen zijn welkom — nieuwe skill packages, presets, bugfixes of documentatie.
 
 1. Fork het project
 2. Maak een feature branch (`git checkout -b feat/mijn-feature`)
@@ -262,4 +259,16 @@ Bijdragen zijn welkom! Of het nu gaat om nieuwe skill packages, presets, bugfixe
 
 MIT &copy; [OpenAEC Foundation](https://github.com/OpenAEC-Foundation)
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a1a2e,25:16213e,50:0f3460,75:533483,100:e94560&height=120&section=footer" width="100%"/>
+<div align="center">
+
+<br/>
+
+[![OpenAEC Foundation](https://img.shields.io/badge/OpenAEC-Foundation-D97706?style=flat-square&logo=github&logoColor=white)](https://github.com/OpenAEC-Foundation)
+[![Style Book](https://img.shields.io/badge/Style-Book-EA580C?style=flat-square&logo=github&logoColor=white)](https://github.com/OpenAEC-Foundation/OpenAEC-style-book)
+[![Open Agents](https://img.shields.io/badge/Open-Agents-F59E0B?style=flat-square&logo=github&logoColor=white)](https://github.com/OpenAEC-Foundation/open-agents)
+
+*Build free. Build together.*
+
+</div>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:36363E,30:D97706,60:F59E0B,100:EA580C&height=120&section=footer" width="100%"/>

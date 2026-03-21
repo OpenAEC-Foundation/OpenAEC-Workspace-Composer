@@ -202,9 +202,9 @@ export const packages: SkillPackage[] = [
   {
     id: "cross-tech-aec",
     name: "Cross-Tech AEC",
-    description: "9 deterministic Claude skills for cross-technology AEC integration — bridging IFC, ERPNext, FreeCAD, Speckle, QGIS, Three.js, n8n, Docker",
+    description: "15 deterministic Claude skills for cross-technology AEC integration — bridging IFC, ERPNext, FreeCAD, Speckle, QGIS, Three.js, n8n, Docker",
     category: "cross-tech",
-    skillCount: 9,
+    skillCount: 15,
     repo: "OpenAEC-Foundation/Cross-Tech-AEC-Claude-Skill-Package",
     status: "published",
     tags: ["cross-tech", "aec", "ifc", "integration", "speckle", "qgis", "threejs"],

@@ -66,9 +66,9 @@ export const packages: SkillPackage[] = [
   {
     id: "frappe",
     name: "Frappe Framework",
-    description: "53 deterministic Claude AI skills for Frappe Framework & ERPNext v14-v16 development and operations",
+    description: "60 deterministic Claude AI skills for Frappe Framework & ERPNext v14-v16 development and operations",
     category: "erp-business",
-    skillCount: 53,
+    skillCount: 60,
     repo: "OpenAEC-Foundation/Frappe_Claude_Skill_Package",
     status: "published",
     tags: ["frappe", "erpnext", "erp", "python", "javascript"],
@@ -128,9 +128,9 @@ export const packages: SkillPackage[] = [
   {
     id: "solidjs",
     name: "SolidJS",
-    description: "6 deterministic Claude AI skills for SolidJS reactive framework development",
+    description: "16 deterministic Claude AI skills for SolidJS reactive framework development",
     category: "web-dev",
-    skillCount: 6,
+    skillCount: 16,
     repo: "OpenAEC-Foundation/SolidJS-Claude-Skill-Package",
     status: "published",
     tags: ["solidjs", "ui", "reactive", "frontend"],

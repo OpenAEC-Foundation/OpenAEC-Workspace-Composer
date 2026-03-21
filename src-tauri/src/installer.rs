@@ -49,6 +49,16 @@ pub struct InstallRequest {
     pub permissions: Option<Vec<String>>,
     /// How to handle conflicts: "skip" | "overwrite" | "merge"
     pub conflict_strategy: Option<String>,
+    /// GPU server sync: create Mutagen session after install
+    pub gpu_sync: Option<GpuSyncConfig>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuSyncConfig {
+    pub enabled: bool,
+    pub ssh_target: String,
+    pub remote_base_path: String, // e.g. /home/freek/workspaces
 }
 
 #[derive(Serialize)]
@@ -109,9 +119,10 @@ pub struct SkillInfo {
     pub path: String,
 }
 
-/// List all skills inside a package by scanning its skills/source/ directory
+/// List all skills inside a package. Tries local first, falls back to GitHub API.
 #[tauri::command]
-pub fn list_package_skills(package_id: String) -> Result<Vec<SkillInfo>, String> {
+pub async fn list_package_skills(package_id: String) -> Result<Vec<SkillInfo>, String> {
+    // Strategy 1: Local scan
     let repo_dir_name = package_repo_dir(&package_id);
     let home = std::env::var("USERPROFILE").unwrap_or_default();
     let base = std::path::PathBuf::from(&home)
@@ -120,15 +131,105 @@ pub fn list_package_skills(package_id: String) -> Result<Vec<SkillInfo>, String>
         .join(repo_dir_name);
 
     let skills_dir = if base.join("skills").join("source").exists() {
-        base.join("skills").join("source")
+        Some(base.join("skills").join("source"))
     } else if base.join("skills").exists() {
-        base.join("skills")
+        Some(base.join("skills"))
     } else {
-        return Err(format!("Package {} not found locally at {}", package_id, base.display()));
+        None
     };
 
+    if let Some(dir) = skills_dir {
+        let mut skills = Vec::new();
+        scan_skills_recursive(&dir, "", &mut skills);
+        skills.sort_by(|a, b| a.id.cmp(&b.id));
+        return Ok(skills);
+    }
+
+    // Strategy 2: GitHub API tree scan (known packages)
+    if let Some(repo_url) = package_repo_url(&package_id) {
+        let repo_path = repo_url
+            .trim_end_matches(".git")
+            .replace("https://github.com/", "");
+        return fetch_skills_from_github(&repo_path).await;
+    }
+
+    // Strategy 3: Try the package_id as a GitHub path directly (custom repos)
+    // e.g. "Claude-Skills-Org/skills-main" or "claude-skills-org-skills-main"
+    if package_id.contains('/') || package_id.contains("--") {
+        let repo_path = package_id.replace("--", "/");
+        return fetch_skills_from_github(&repo_path).await;
+    }
+
+    Err(format!("Package {} not found locally and no GitHub repo configured", package_id))
+}
+
+/// Fetch skill directories from GitHub API using the git tree endpoint
+async fn fetch_skills_from_github(repo: &str) -> Result<Vec<SkillInfo>, String> {
+    let tree_url = format!(
+        "https://api.github.com/repos/{}/git/trees/main?recursive=1",
+        repo
+    );
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&tree_url)
+        .header("Accept", "application/vnd.github.v3+json")
+        .header("User-Agent", "OpenAEC-Workspace-Composer")
+        .send()
+        .await
+        .map_err(|e| format!("GitHub API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("GitHub API returned {}", response.status()));
+    }
+
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse GitHub response: {}", e))?;
+
+    let tree = body["tree"]
+        .as_array()
+        .ok_or("Invalid GitHub tree response")?;
+
+    // Find all SKILL.md files in the tree (any depth, any structure)
     let mut skills = Vec::new();
-    scan_skills_recursive(&skills_dir, "", &mut skills);
+    for entry in tree {
+        let path = entry["path"].as_str().unwrap_or("");
+        if !path.ends_with("SKILL.md") {
+            continue;
+        }
+
+        let parts: Vec<&str> = path.split('/').collect();
+        if parts.len() < 2 {
+            continue; // Root SKILL.md, skip
+        }
+
+        let skill_name = parts[parts.len() - 2]; // directory containing SKILL.md
+
+        // Skip meta directories
+        if skill_name == "source" || skill_name == "skills" || skill_name == ".claude-plugin" || skill_name == "template-skill" {
+            continue;
+        }
+
+        // Category: look 2 levels up if available, otherwise empty
+        let category = if parts.len() >= 3 {
+            let parent = parts[parts.len() - 3];
+            // Don't use "source", "skills", or root as category
+            if parent == "source" || parent == "skills" { "" } else { parent }
+        } else {
+            ""
+        };
+
+        skills.push(SkillInfo {
+            id: skill_name.to_string(),
+            name: skill_name.replace('-', " "),
+            description: String::new(),
+            category: category.to_string(),
+            path: path.to_string(),
+        });
+    }
+
     skills.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(skills)
 }
@@ -671,8 +772,60 @@ pub async fn install_workspace(
     };
     let workspace_file = format!("{}.code-workspace", ws_name.to_lowercase().replace(' ', "-"));
 
+    // GPU server sync: create Mutagen session if configured
+    if let Some(ref gpu) = request.gpu_sync {
+        if gpu.enabled && !gpu.ssh_target.is_empty() {
+            emit_progress(&app, "GPU Sync", total_steps - 1, total_steps,
+                &format!("Setting up sync to {}...", gpu.ssh_target));
+
+            let project_dir_name = workspace_path.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let remote_path = format!("{}/{}", gpu.remote_base_path.trim_end_matches('/'), project_dir_name);
+
+            // Create remote directory via SSH
+            let _ = Command::new("ssh")
+                .args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+                       &gpu.ssh_target, &format!("mkdir -p {}", remote_path)])
+                .output();
+
+            // Create Mutagen sync session
+            let mutagen_path = crate::gpu_server::mutagen::find_mutagen_path();
+            let session_name = format!("openaec-{}", project_dir_name.to_lowercase().replace(' ', "-"));
+            let remote_target = format!("{}:{}", gpu.ssh_target, remote_path);
+
+            let sync_result = Command::new(&mutagen_path)
+                .args(["sync", "create",
+                       &workspace_path.to_string_lossy(),
+                       &remote_target,
+                       &format!("--name={}", session_name),
+                       "--ignore-vcs",
+                       "--default-directory-mode=0755",
+                       "--default-file-mode=0644"])
+                .output();
+
+            match sync_result {
+                Ok(output) if output.status.success() => {
+                    files_created.push(format!("GPU sync: {} -> {}", project_dir_name, remote_path));
+                }
+                Ok(output) => {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    emit_progress(&app, "GPU Sync Warning", total_steps - 1, total_steps,
+                        &format!("Sync setup failed: {}", stderr.lines().next().unwrap_or("")));
+                }
+                Err(e) => {
+                    emit_progress(&app, "GPU Sync Warning", total_steps - 1, total_steps,
+                        &format!("Mutagen not available: {}", e));
+                }
+            }
+        }
+    }
+
+    // Open in VS Code (last step, after everything is ready)
     if request.open_vscode.unwrap_or(false) {
         let ws_file = workspace_path.join(&workspace_file);
+        emit_progress(&app, "Opening VS Code", total_steps, total_steps, "Launching workspace...");
         let _ = shell_spawn("code", &[&ws_file.to_string_lossy()]);
     }
 
@@ -727,30 +880,74 @@ fn generate_claude_md(
         return Ok(None);
     }
 
-    let ws_name = if name.is_empty() { "Workspace" } else { name };
-    let mut content = format!("# {}\n\n", ws_name);
-    content.push_str("## Identity\n");
-    content.push_str("Project workspace configured by OpenAEC Workspace Composer.\n\n");
+    let ws_name = if name.is_empty() { "My Project" } else { name };
 
-    if !packages.is_empty() {
-        content.push_str("## Installed Skill Packages\n\n");
-        content.push_str("Skills are installed in `.claude/skills/` and auto-discovered by Claude Code.\n\n");
-        for pkg in packages {
-            content.push_str(&format!("- **{}** — `.claude/skills/{}--*/`\n", pkg, pkg));
+    // Build the stack description from installed packages
+    let stack_list: Vec<String> = packages.iter().map(|p| {
+        p.replace('-', " ")
+         .split_whitespace()
+         .map(|w| {
+             let mut c = w.chars();
+             match c.next() {
+                 None => String::new(),
+                 Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+             }
+         })
+         .collect::<Vec<_>>()
+         .join(" ")
+    }).collect();
+
+    let mut content = String::new();
+
+    // Header
+    content.push_str(&format!("# {}\n\n", ws_name));
+
+    // What this workspace is for
+    content.push_str("## What to build\n\n");
+    content.push_str("Describe your project here. Claude will use this context to understand what you're building and make better decisions.\n\n");
+    content.push_str(&format!("**Project**: {}\n", ws_name));
+    content.push_str("**Goal**: [Describe what you want to build]\n");
+    content.push_str("**Target users**: [Who is this for?]\n\n");
+
+    // Available stack
+    if !stack_list.is_empty() {
+        content.push_str("## Available Stack\n\n");
+        content.push_str("This workspace has skill packages installed that give Claude deep knowledge of:\n\n");
+        for s in &stack_list {
+            content.push_str(&format!("- {}\n", s));
         }
-        content.push('\n');
+        content.push_str("\nClaude automatically loads the relevant skills based on what you're working on. You don't need to do anything special.\n\n");
     }
 
-    content.push_str("## Conventions\n\n");
-    content.push_str("- Documentation: Nederlands\n");
-    content.push_str("- Code & configs: English\n");
-    content.push_str("- Conventional Commits: feat:, fix:, docs:, refactor:, test:, chore:\n");
+    // How to work
+    content.push_str("## How to work\n\n");
+    content.push_str("- Tell Claude what you want to build. Be specific about functionality, not implementation.\n");
+    content.push_str("- Claude knows your stack. Ask it to use the installed technologies.\n");
+    content.push_str("- Start simple. Get something working first, then iterate.\n");
+    content.push_str("- Review what Claude builds. Ask questions if something is unclear.\n\n");
 
+    // Conventions
+    content.push_str("## Conventions\n\n");
+    content.push_str("- Documentation language: Nederlands\n");
+    content.push_str("- Code and configs: English\n");
+    content.push_str("- Commit style: Conventional Commits (feat:, fix:, docs:, refactor:, test:, chore:)\n");
+
+    // Protocols for high effort
     if effort == "high" {
         content.push_str("\n## Protocols\n\n");
-        content.push_str("- P-001: Always verify before destructive operations\n");
-        content.push_str("- P-002: Read files before modifying\n");
-        content.push_str("- P-003: Use dedicated tools over Bash equivalents\n");
+        content.push_str("- Always verify before destructive operations\n");
+        content.push_str("- Read files before modifying them\n");
+        content.push_str("- Use dedicated tools over Bash equivalents\n");
+        content.push_str("- Research before implementing. Check existing code first.\n");
+    }
+
+    // Technical reference
+    if !packages.is_empty() {
+        content.push_str("\n## Installed skill packages\n\n");
+        content.push_str("Auto-discovered from `.claude/skills/`. Do not edit these manually.\n\n");
+        for pkg in packages {
+            content.push_str(&format!("- {}\n", pkg));
+        }
     }
 
     fs::write(&file_path, &content).map_err(|e| format!("Failed to write CLAUDE.md: {}", e))?;

@@ -10,6 +10,10 @@ pub struct MutagenSessionInfo {
     pub remote_path: String,
 }
 
+pub fn find_mutagen_path() -> String {
+    find_mutagen()
+}
+
 fn find_mutagen() -> String {
     // Check common locations on Windows
     if let Ok(home) = std::env::var("USERPROFILE") {

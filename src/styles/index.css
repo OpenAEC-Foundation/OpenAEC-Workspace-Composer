@@ -1,0 +1,48 @@
+/* ============================================================
+   OpenAEC Workspace Composer — Modular CSS Index
+   Import order matters: tokens first, reset second,
+   component styles, animations near end, responsive last.
+   ============================================================ */
+
+/* 1. Foundation */
+@import './tokens.css';
+@import './theme-light.css';
+@import './reset.css';
+@import './typography.css';
+
+/* 2. Layout */
+@import './layout.css';
+@import './sidebar.css';
+@import './content.css';
+
+/* 3. Components */
+@import './cards.css';
+@import './forms.css';
+@import './presets.css';
+@import './packages.css';
+@import './tags.css';
+@import './install.css';
+@import './buttons.css';
+@import './progress.css';
+@import './statusbar.css';
+@import './tooltip.css';
+@import './modal.css';
+@import './toggle.css';
+@import './gradient-strip.css';
+@import './effort.css';
+@import './workflow.css';
+@import './skill-quality.css';
+
+/* 4. Feature sections */
+@import './gpu.css';
+@import './teams.css';
+@import './prereqs.css';
+@import './conflicts.css';
+@import './workspace.css';
+
+/* 5. Utilities & Animations */
+@import './utilities.css';
+@import './animations.css';
+
+/* 6. Responsive (must be last) */
+@import './responsive.css';

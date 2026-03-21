@@ -1,0 +1,58 @@
+/* ============================================================
+   20. Status Bar (bottom)
+   ============================================================ */
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--statusbar-h);
+  background: var(--accent);
+  color: #fff;
+  padding: 0 var(--sp-3);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.statusbar-left,
+.statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.9;
+}
+
+.statusbar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.statusbar-dot.warn {
+  background: var(--warm-gold);
+}
+
+.statusbar-dot.error {
+  background: var(--error);
+}
+
+/* ============================================================
+   Workflow Badge (StatusBar)
+   ============================================================ */
+
+.statusbar-workflow-badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}

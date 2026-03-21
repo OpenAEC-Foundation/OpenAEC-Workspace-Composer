@@ -512,7 +512,7 @@ function SetupGuide() {
               <strong style={{ color: "var(--accent)" }}>5. Fill in the form above</strong>
               <p class="text-dim">
                 Enter your server details and click "Test Connection". If using an SSH config alias,
-                you only need to fill in the alias field — host, port and key are read from your config.
+                you only need to fill in the alias field. Host, port and key are read from your config.
               </p>
             </div>
           </div>

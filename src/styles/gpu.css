@@ -1,0 +1,99 @@
+/* ============================================================
+   GPU Server — Sync Cards
+   ============================================================ */
+
+.sync-session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.sync-session-card:last-of-type {
+  margin-bottom: 0;
+}
+
+.sync-paths {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) 0;
+}
+
+/* ============================================================
+   Path Validation
+   ============================================================ */
+.path-validation {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  font-size: 0.75rem;
+}
+
+.path-validation .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.path-validation .dot.valid { background: var(--success); }
+.path-validation .dot.warning { background: var(--warm-gold); }
+.path-validation .dot.error { background: var(--error); }
+
+.path-validation .message { color: var(--text-dim); }
+.path-validation .message.valid { color: var(--success); }
+.path-validation .message.warning { color: var(--warm-gold); }
+.path-validation .message.error { color: var(--error); }
+
+.recent-workspaces {
+  margin-top: var(--sp-4);
+}
+
+.recent-workspaces h3 {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-2);
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-1);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+
+.recent-item:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.recent-item .path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.new-folder-input {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.new-folder-input input {
+  flex: 1;
+}

@@ -138,12 +138,13 @@ export function WorkspacePage() {
 
       {/* Bottom bar: workspace path + actions */}
       <div class="workspace-bottom">
-        <div class="workspace-path-row">
+        <div class="workspace-path-group">
+          <label>Path</label>
           <div class="workspace-path-input">
             <input
               type="text"
               class="form-input"
-              placeholder="Workspace path..."
+              placeholder="C:\Projects\my-workspace"
               value={workspaceStore.workspacePath()}
               onInput={(e) => handlePathChange(e.currentTarget.value)}
               onPaste={(e) => {
@@ -151,76 +152,79 @@ export function WorkspacePage() {
                 if (text) { e.preventDefault(); handlePathChange(text.trim()); }
               }}
             />
-            <button class="btn btn-ghost btn-sm" onClick={handleBrowse}>Browse</button>
+            <button class="btn btn-ghost btn-sm" onClick={handleBrowse} title="Browse folder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
             <Show when={!showNewFolder()}>
-              <button class="btn btn-ghost btn-sm" onClick={() => setShowNewFolder(true)} title="Create subfolder">+</button>
-            </Show>
-          </div>
-
-          {/* Inline validation */}
-          <Show when={workspaceStore.workspacePath()}>
-            <Show when={validation()}>
-              {(v) => (
-                <>
-                  <Show when={v().exists && v().is_dir && v().is_writable}>
-                    <span class="dot valid" title="Valid path" />
-                  </Show>
-                  <Show when={v().exists && v().is_dir && !v().is_writable}>
-                    <span class="dot error" title="Not writable" />
-                  </Show>
-                  <Show when={!v().exists}>
-                    <span class="dot error" title="Does not exist" />
-                    <button
-                      class="btn btn-ghost btn-sm"
-                      style={{ "font-size": "0.65rem" }}
-                      onClick={handleCreateDirectory}
-                    >
-                      Create
-                    </button>
-                  </Show>
-                </>
-              )}
-            </Show>
-          </Show>
-
-          {/* Selection summary + install */}
-          <div class="workspace-actions">
-            <Show when={selectedCount() > 0}>
-              <span class="workspace-summary">
-                <strong>{selectedCount()}</strong> packages
-                <span class="text-muted"> ({totalSkills()} skills)</span>
-              </span>
-              <button class="btn btn-ghost btn-sm" onClick={() => packagesStore.clearSelection()}>
-                Clear
+              <button class="btn btn-ghost btn-sm" onClick={() => setShowNewFolder(true)} title="New subfolder">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
               </button>
             </Show>
-            <A
-              href="/install"
-              class={`btn btn-sm ${canInstall() ? "btn-generate" : "btn-secondary"}`}
-            >
-              Install
-            </A>
           </div>
+        </div>
+
+        {/* Validation dot */}
+        <div class="workspace-validation">
+          <Show when={workspaceStore.workspacePath() && validation()}>
+            {(_) => {
+              const v = validation()!;
+              return (
+                <>
+                  <Show when={v.exists && v.is_dir && v.is_writable}>
+                    <span class="dot valid" title="Valid workspace path" />
+                  </Show>
+                  <Show when={v.exists && v.is_dir && !v.is_writable}>
+                    <span class="dot error" title="Not writable" />
+                  </Show>
+                  <Show when={!v.exists}>
+                    <span class="dot error" title="Path does not exist" />
+                    <button class="btn btn-ghost btn-sm" style={{ "font-size": "0.65rem" }} onClick={handleCreateDirectory}>Create</button>
+                  </Show>
+                </>
+              );
+            }}
+          </Show>
         </div>
 
         {/* New folder inline */}
         <Show when={showNewFolder()}>
-          <div class="new-folder-input" style={{ "margin-top": "var(--sp-2)" }}>
-            <input
-              type="text"
-              class="form-input"
-              placeholder="Folder name"
-              value={newFolderName()}
-              onInput={(e) => setNewFolderName(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateSubfolder();
-                if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); }
-              }}
-            />
-            <button class="btn btn-primary btn-sm" onClick={handleCreateSubfolder}>Create</button>
-            <button class="btn btn-ghost btn-sm" onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}>Cancel</button>
+          <div class="workspace-path-group">
+            <label>New</label>
+            <div class="workspace-path-input">
+              <input
+                type="text"
+                class="form-input"
+                style={{ width: "160px", "min-width": "120px", "max-width": "200px" }}
+                placeholder="folder name"
+                value={newFolderName()}
+                onInput={(e) => setNewFolderName(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreateSubfolder();
+                  if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); }
+                }}
+              />
+              <button class="btn btn-primary btn-sm" onClick={handleCreateSubfolder}>OK</button>
+              <button class="btn btn-ghost btn-sm" onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}>×</button>
+            </div>
           </div>
         </Show>
+
+        {/* Selection summary + install — pushed to right */}
+        <div class="workspace-actions">
+          <Show when={selectedCount() > 0}>
+            <span class="workspace-summary">
+              <strong>{selectedCount()}</strong> pkg
+              <span class="text-muted"> · {totalSkills()} skills</span>
+            </span>
+            <button class="btn btn-ghost btn-sm" onClick={() => packagesStore.clearSelection()}>Clear</button>
+          </Show>
+          <A href="/configure" class="btn btn-ghost btn-sm">Configure</A>
+          <A href="/install" class={`btn btn-sm ${canInstall() ? "btn-generate" : "btn-secondary"}`}>Install</A>
+        </div>
       </div>
     </div>
   );

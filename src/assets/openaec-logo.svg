@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+
+    <!-- Deep amber-tinted dark background, slightly lit from root position -->
+    <radialGradient id="bg" cx="45%" cy="50%" r="55%">
+      <stop offset="0%"   stop-color="#180800"/>
+      <stop offset="100%" stop-color="#070200"/>
+    </radialGradient>
+
+    <!-- Root node: strong amber glow -->
+    <filter id="rootGlow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- L1 nodes: medium glow -->
+    <filter id="l1Glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- L2 nodes: soft glow -->
+    <filter id="l2Glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Pulse animation on root -->
+    <style>
+      @keyframes rootPulse {
+        0%, 100% { opacity: 0.88; }
+        50%       { opacity: 1.00; }
+      }
+      .root { animation: rootPulse 3.5s ease-in-out infinite; }
+    </style>
+
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" rx="20" fill="url(#bg)"/>
+
+  <!--
+    TREE GEOMETRY (all angles in SVG coord space, Y increases downward)
+
+    Root:  (180, 200)
+    L1 A:  315° → (240, 140)   [upper-right]
+    L1 B:    0° → (265, 200)   [right]
+    L1 C:   45° → (240, 260)   [lower-right]
+
+    From A (240,140):  280° → (251, 76)    350° → (304, 129)
+    From B (265,200):  325° → (318, 163)    35° → (318, 237)
+    From C (240,260):   10° → (304, 271)    80° → (251, 324)
+  -->
+
+  <!-- ── ROOT → L1 LINES ── -->
+  <line x1="180" y1="200" x2="240" y2="140" stroke="#c97706" stroke-width="1.6" stroke-linecap="round" opacity="0.50"/>
+  <line x1="180" y1="200" x2="265" y2="200" stroke="#c97706" stroke-width="1.6" stroke-linecap="round" opacity="0.50"/>
+  <line x1="180" y1="200" x2="240" y2="260" stroke="#c97706" stroke-width="1.6" stroke-linecap="round" opacity="0.50"/>
+
+  <!-- ── L1 → L2 LINES ── -->
+  <line x1="240" y1="140" x2="251" y2="76"  stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+  <line x1="240" y1="140" x2="304" y2="129" stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+  <line x1="265" y1="200" x2="318" y2="163" stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+  <line x1="265" y1="200" x2="318" y2="237" stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+  <line x1="240" y1="260" x2="304" y2="271" stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+  <line x1="240" y1="260" x2="251" y2="324" stroke="#d06020" stroke-width="1.2" stroke-linecap="round" opacity="0.42"/>
+
+  <!-- ── L2 NODES ── -->
+  <circle cx="251" cy="76"  r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+  <circle cx="304" cy="129" r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+  <circle cx="318" cy="163" r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+  <circle cx="318" cy="237" r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+  <circle cx="304" cy="271" r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+  <circle cx="251" cy="324" r="7" fill="#EA580C" filter="url(#l2Glow)"/>
+
+  <!-- ── L1 NODES ── -->
+  <circle cx="240" cy="140" r="11" fill="#D97706" filter="url(#l1Glow)"/>
+  <circle cx="265" cy="200" r="11" fill="#D97706" filter="url(#l1Glow)"/>
+  <circle cx="240" cy="260" r="11" fill="#D97706" filter="url(#l1Glow)"/>
+
+  <!-- ── ROOT NODE (drawn last, on top) ── -->
+  <circle cx="180" cy="200" r="18" fill="#F59E0B" class="root" filter="url(#rootGlow)"/>
+
+</svg>

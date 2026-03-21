@@ -1,0 +1,42 @@
+/* ============================================================
+   10. Cards (generic)
+   ============================================================ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+.card-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-4);
+}
+
+.card + .card {
+  margin-top: var(--sp-4);
+}
+
+/* ============================================================
+   11. Workspace Config Card
+   ============================================================ */
+.workspace-config {
+  margin-bottom: var(--sp-4);
+}
+
+.workspace-config .card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

@@ -1,0 +1,35 @@
+/* ============================================================
+   Light Theme Overrides
+   Applied when [data-theme="light"] is set on <html>
+   ============================================================ */
+
+[data-theme="light"] {
+  --accent:            #B45309;
+  --accent-hover:      #92400E;
+  --signal-orange:     #C2410C;
+  --warm-gold:         #D97706;
+  --success:           #16A34A;
+  --success-strong:    #15803D;
+  --error:             #DC2626;
+  --error-strong:      #B91C1C;
+  --info:              #1D4ED8;
+
+  --bg-primary:        #F5F0EB;
+  --bg-sidebar:        #EDE8E3;
+  --bg-card:           #FFFFFF;
+  --bg-night:          #F0EDE8;
+  --bg-hover:          rgba(180, 83, 9, 0.06);
+  --bg-active:         rgba(180, 83, 9, 0.1);
+  --bg-input:          rgba(180, 83, 9, 0.04);
+
+  --text-primary:      #1C1917;
+  --text-dim:          rgba(28, 25, 23, 0.65);
+  --text-muted:        rgba(28, 25, 23, 0.45);
+
+  --border:            rgba(180, 83, 9, 0.15);
+  --border-strong:     rgba(180, 83, 9, 0.3);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
+}

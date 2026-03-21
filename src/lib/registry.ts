@@ -168,7 +168,7 @@ async function fetchAnthropicPackages(): Promise<RegistryPackage[]> {
   for (const plugin of manifest.plugins) {
     packages.push({
       id: `anthropic-${plugin.name}`,
-      name: `${plugin.name} (Anthropic)`,
+      name: plugin.name.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       description: plugin.description,
       category: "web-dev" as const,
       skillCount: plugin.skills.length,

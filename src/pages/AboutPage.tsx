@@ -69,7 +69,7 @@ export function AboutPage() {
               class="text-dim"
               style={{ "font-size": "0.85rem", "text-decoration": "none" }}
             >
-              <span style={{ color: "var(--accent)" }}>GitHub</span> — OpenAEC Foundation
+              <span style={{ color: "var(--accent)" }}>GitHub</span>. OpenAEC Foundation
             </a>
             <a
               href="https://github.com/OpenAEC-Foundation/OpenAEC-Workspace-Composer"
@@ -78,7 +78,7 @@ export function AboutPage() {
               class="text-dim"
               style={{ "font-size": "0.85rem", "text-decoration": "none" }}
             >
-              <span style={{ color: "var(--accent)" }}>Repository</span> — Workspace Composer source
+              <span style={{ color: "var(--accent)" }}>Repository</span>. Workspace Composer source
             </a>
           </div>
         </div>

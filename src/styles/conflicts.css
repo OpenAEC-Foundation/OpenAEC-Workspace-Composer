@@ -1,0 +1,61 @@
+/* ============================================================
+   Conflict Resolution UI
+   ============================================================ */
+.conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.conflict-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+}
+
+.conflict-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.conflict-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.strategy-options {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.strategy-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-3);
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+}
+
+.strategy-option:hover {
+  border-color: var(--border-strong);
+}
+
+.strategy-option.active {
+  border-color: var(--accent);
+  background: rgba(217, 119, 6, 0.08);
+}

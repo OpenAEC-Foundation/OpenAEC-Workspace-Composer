@@ -1,0 +1,71 @@
+/* ============================================================
+   Workspace unified layout
+   ============================================================ */
+.workspace-topbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  flex-shrink: 0;
+}
+
+.workspace-bottom {
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.workspace-path-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.workspace-path-group label {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.workspace-path-input {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.workspace-path-input .form-input {
+  width: 280px;
+  min-width: 180px;
+  max-width: 360px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  padding: 5px 10px;
+  height: 30px;
+}
+
+.workspace-validation {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.workspace-summary {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

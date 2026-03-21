@@ -1,0 +1,50 @@
+/* ============================================================
+   31. Effort Level Selector
+   ============================================================ */
+.effort-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.effort-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: center;
+}
+
+.effort-btn strong {
+  font-family: var(--font-heading);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}
+
+.effort-btn small {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.effort-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.effort-btn.active {
+  border-color: var(--accent);
+  background: var(--bg-active);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.effort-btn.active strong {
+  color: var(--accent);
+}

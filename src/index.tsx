@@ -1,7 +1,7 @@
 /* @refresh reload */
 import { render } from "solid-js/web";
 import { Router, Route, Navigate } from "@solidjs/router";
-import "./styles.css";
+import "./styles/index.css";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { WorkspacePage } from "./pages/WorkspacePage";
@@ -13,7 +13,14 @@ import { PermissionsPage } from "./pages/PermissionsPage";
 import { HooksPage } from "./pages/HooksPage";
 import { McpPage } from "./pages/McpPage";
 import { TemplatesPage } from "./pages/TemplatesPage";
-import { SyncPage } from "./pages/SyncPage";
+import { CommandsPage } from "./pages/CommandsPage";
+import { MemoryPage } from "./pages/MemoryPage";
+import { PromptsPage } from "./pages/PromptsPage";
+import { CoreFilesPage } from "./pages/CoreFilesPage";
+import { AuthPage } from "./pages/AuthPage";
+import { GitPage } from "./pages/GitPage";
+import { PresetsPage } from "./pages/PresetsPage";
+import { TeamsPage } from "./pages/TeamsPage";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
@@ -32,8 +39,15 @@ render(
       <Route path="/templates" component={TemplatesPage} />
       <Route path="/install" component={InstallPage} />
       <Route path="/gpu-server" component={GpuServerPage} />
-      <Route path="/sync" component={SyncPage} />
       <Route path="/about" component={AboutPage} />
+      <Route path="/commands" component={CommandsPage} />
+      <Route path="/memory" component={MemoryPage} />
+      <Route path="/prompts" component={PromptsPage} />
+      <Route path="/core-files" component={CoreFilesPage} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/git" component={GitPage} />
+      <Route path="/presets" component={PresetsPage} />
+      <Route path="/teams" component={TeamsPage} />
     </Router>
   ),
   root

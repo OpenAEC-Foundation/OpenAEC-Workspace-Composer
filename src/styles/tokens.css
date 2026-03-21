@@ -1,0 +1,86 @@
+/* ============================================================
+   OpenAEC Workspace Composer — Design System Stylesheet
+   OpenAEC Foundation | Construction Amber palette
+   ============================================================ */
+
+/* --- Google Fonts --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
+
+/* ============================================================
+   1. Design Tokens (CSS Custom Properties)
+   ============================================================ */
+:root {
+  /* --- Palette --- */
+  --accent:            #D97706;
+  --accent-hover:      #B45309;
+  --signal-orange:     #EA580C;
+  --warm-gold:         #F59E0B;
+  --success:           #22c55e;
+  --success-strong:    #16A34A;
+  --error:             #ef4444;
+  --error-strong:      #DC2626;
+  --info:              #2563EB;
+
+  /* --- Surfaces --- */
+  --bg-primary:        #3E3636;
+  --bg-sidebar:        #332d2d;
+  --bg-card:           #4a4242;
+  --bg-night:          #2A2A32;
+  --bg-hover:          rgba(217, 119, 6, 0.1);
+  --bg-active:         rgba(217, 119, 6, 0.15);
+  --bg-input:          rgba(217, 119, 6, 0.05);
+
+  /* --- Typography --- */
+  --text-primary:      #F5F0EB;
+  --text-dim:          rgba(245, 240, 235, 0.6);
+  --text-muted:        rgba(245, 240, 235, 0.5);
+
+  /* --- Borders --- */
+  --border:            rgba(217, 119, 6, 0.2);
+  --border-strong:     rgba(217, 119, 6, 0.35);
+
+  /* --- Fonts --- */
+  --font-heading:      "Space Grotesk", system-ui, sans-serif;
+  --font-body:         "Inter", system-ui, sans-serif;
+  --font-mono:         "JetBrains Mono", monospace;
+
+  /* --- Spacing (4px base) --- */
+  --sp-1:  0.25rem;   /*  4px */
+  --sp-2:  0.5rem;    /*  8px */
+  --sp-3:  0.75rem;   /* 12px */
+  --sp-4:  1rem;      /* 16px */
+  --sp-5:  1.25rem;   /* 20px */
+  --sp-6:  1.5rem;    /* 24px */
+  --sp-8:  2rem;      /* 32px */
+  --sp-10: 2.5rem;    /* 40px */
+  --sp-12: 3rem;      /* 48px */
+  --sp-16: 4rem;      /* 64px */
+  --sp-20: 5rem;      /* 80px */
+  --sp-24: 6rem;      /* 96px */
+
+  /* --- Radii --- */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-full: 9999px;
+
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+               0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+               0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  /* --- Gradients --- */
+  --gradient-accent: linear-gradient(90deg, #D97706 0%, #F59E0B 40%, #EA580C 100%);
+
+  /* --- Layout constants --- */
+  --titlebar-h:  32px;
+  --header-h:    56px;
+  --sidebar-w:   220px;
+  --panel-w:     380px;
+  --statusbar-h: 22px;
+
+  /* --- Transitions --- */
+  --transition: 0.15s ease;
+}

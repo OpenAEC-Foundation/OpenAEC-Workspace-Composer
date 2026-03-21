@@ -10,9 +10,17 @@
     "check": "node scripts/check-prerequisites.js",
     "tauri": "tauri",
     "tauri:dev": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
-    "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build"
+    "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
+    "dev:clean": "bash scripts/dev.sh"
   },
-  "keywords": ["claude", "workspace", "skill-packages", "openaec", "tauri", "solidjs"],
+  "keywords": [
+    "claude",
+    "workspace",
+    "skill-packages",
+    "openaec",
+    "tauri",
+    "solidjs"
+  ],
   "author": "OpenAEC Foundation",
   "license": "MIT",
   "devDependencies": {
@@ -26,6 +34,8 @@
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-shell": "^2.2.1",
-    "solid-js": "^1.9.7"
+    "solid-icons": "^1.2.0",
+    "solid-js": "^1.9.7",
+    "solid-transition-group": "^0.3.0"
   }
 }

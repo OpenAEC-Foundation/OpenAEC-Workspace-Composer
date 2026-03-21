@@ -1,0 +1,235 @@
+/* ============================================================
+   17. Install Preview Panel (sticky right)
+   ============================================================ */
+.install-panel {
+  width: var(--panel-w);
+  min-width: var(--panel-w);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - var(--titlebar-h) - var(--header-h) - 3px - var(--statusbar-h) - var(--sp-10));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Stats row */
+.preview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.stat {
+  text-align: center;
+  padding: var(--sp-3);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.stat-value {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.2;
+  /* animated counter feel via tabular nums */
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* Selected packages list */
+.preview-list {
+  margin-bottom: var(--sp-4);
+}
+
+.preview-list h3,
+.preview-output h3 {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-3);
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid rgba(217, 119, 6, 0.08);
+  font-size: 0.8125rem;
+}
+
+.preview-item:last-child {
+  border-bottom: none;
+}
+
+.preview-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.preview-skills {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+/* Output preview */
+.preview-output {
+  margin-bottom: var(--sp-5);
+}
+
+.preview-output ul {
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.preview-output li {
+  padding: 3px 0;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.preview-output li::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.preview-output code {
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+/* Empty state */
+.empty,
+.empty-state {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-style: italic;
+  text-align: center;
+  padding: var(--sp-6) var(--sp-4);
+  line-height: 1.6;
+}
+
+.empty-state svg,
+.empty-state .icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto var(--sp-3);
+  opacity: 0.3;
+  display: block;
+}
+
+/* ============================================================
+   Install Page
+   ============================================================ */
+.install-hero {
+  text-align: center;
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.install-hero h2 {
+  margin-bottom: var(--sp-2);
+}
+
+.install-hero p {
+  color: var(--text-dim);
+}
+
+.install-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+  padding: 0 var(--sp-5);
+}
+
+.install-packages-list {
+  padding: 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+
+.install-package-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-1);
+}
+
+.install-package-item .package-name {
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.install-package-item .skill-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.install-actions {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-6);
+}
+
+.install-result {
+  text-align: center;
+  padding: var(--sp-8);
+}
+
+.install-result.success h2 {
+  color: var(--success);
+}
+
+.install-result.error h2 {
+  color: var(--error);
+}
+
+/* ============================================================
+   Install Progress
+   ============================================================ */
+.install-progress {
+  padding: var(--sp-3) 0;
+}

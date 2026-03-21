@@ -1,6 +1,7 @@
 import { createSignal, createMemo } from "solid-js";
 
-export type InstallStatus = "idle" | "checking" | "installing" | "success" | "error";
+export type InstallStatus = "idle" | "checking" | "conflicts" | "installing" | "success" | "error";
+export type ConflictStrategy = "skip" | "overwrite" | "merge";
 
 export interface InstallStep {
   id: string;
@@ -14,6 +15,19 @@ export interface PrerequisiteCheck {
   required: boolean;
   found: boolean;
   version?: string;
+  installHint?: string;
+}
+
+export interface Conflict {
+  path: string;
+  kind: string;
+  description: string;
+  existingSize: number | null;
+}
+
+export interface ConflictScanResult {
+  conflicts: Conflict[];
+  hasConflicts: boolean;
 }
 
 // Install state
@@ -24,9 +38,14 @@ const [installError, setInstallError] = createSignal<string | null>(null);
 const [installResult, setInstallResult] = createSignal<{
   workspaceFile: string;
   filesCreated: string[];
+  filesSkipped: string[];
   packagesInstalled?: string[];
   skillsTotal?: number;
 } | null>(null);
+
+// Conflict state
+const [conflicts, setConflicts] = createSignal<Conflict[]>([]);
+const [conflictStrategy, setConflictStrategy] = createSignal<ConflictStrategy>("merge");
 
 // Prerequisites
 const [prerequisites, setPrerequisites] = createSignal<PrerequisiteCheck[]>([]);
@@ -46,6 +65,7 @@ function resetInstall() {
   setInstallSteps([]);
   setInstallError(null);
   setInstallResult(null);
+  setConflicts([]);
 }
 
 function updateStep(id: string, status: InstallStep["status"]) {
@@ -65,6 +85,10 @@ export const installStore = {
   setInstallError,
   installResult,
   setInstallResult,
+  conflicts,
+  setConflicts,
+  conflictStrategy,
+  setConflictStrategy,
   prerequisites,
   setPrerequisites,
   prerequisitesChecked,

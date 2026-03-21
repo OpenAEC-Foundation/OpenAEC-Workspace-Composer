@@ -1,13 +1,61 @@
 import { createMemo, For, Show, onMount, onCleanup } from "solid-js";
 import { workspaceStore } from "../stores/workspace.store";
+import type { PathValidation } from "../stores/workspace.store";
 import { packagesStore } from "../stores/packages.store";
-import { configStore } from "../stores/config.store";
 import { installStore } from "../stores/install.store";
-import { getWorkflowType } from "../lib/workflows";
+import type { ConflictStrategy } from "../stores/install.store";
 
 export function InstallPage() {
-  const currentWorkflow = createMemo(() => getWorkflowType(workspaceStore.workflowType()));
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  function debouncedValidate(path: string) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    if (!path) { workspaceStore.setPathValidation(null); return; }
+    debounceTimer = setTimeout(() => validatePath(path), 300);
+  }
+
+  async function validatePath(path: string) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = await invoke<PathValidation>("validate_path", { path });
+      workspaceStore.setPathValidation(result);
+    } catch { workspaceStore.setPathValidation(null); }
+  }
+
+  function handlePathChange(path: string) {
+    workspaceStore.setWorkspacePath(path);
+    debouncedValidate(path);
+  }
+
+  async function handleBrowse() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({ directory: true, multiple: false });
+      if (selected) {
+        workspaceStore.setWorkspacePath(selected as string);
+        await validatePath(selected as string);
+      }
+    } catch {
+      const path = prompt("Workspace pad:");
+      if (path) { workspaceStore.setWorkspacePath(path); debouncedValidate(path); }
+    }
+  }
+
+  async function handleCreateDirectory() {
+    const path = workspaceStore.workspacePath();
+    if (!path) return;
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("create_directory", { path });
+      await validatePath(path);
+    } catch (e) { console.error("Failed to create directory:", e); }
+  }
+
+  const validation = () => workspaceStore.pathValidation();
+  const pathIsValid = createMemo(() => {
+    const v = validation();
+    return v !== null && v.exists && v.is_dir && v.is_writable;
+  });
   const selectedPackageObjects = createMemo(() =>
     packagesStore.registryPackages().filter((p) => packagesStore.selectedPackages().includes(p.id))
   );
@@ -16,27 +64,47 @@ export function InstallPage() {
     selectedPackageObjects().reduce((sum, p) => sum + p.skillCount, 0)
   );
 
-  const publishedCount = createMemo(() =>
-    selectedPackageObjects().filter((p) => p.status === "published").length
-  );
-
-  const enabledCoreFiles = createMemo(() =>
-    configStore.coreFiles().filter((f) => f.enabled)
-  );
-
-  const buttonLabel = createMemo(() =>
-    workspaceStore.workflowType() === "skill-package" ? "Install Workspace" : "Bootstrap Upgrade"
-  );
-
   function canInstall(): boolean {
-    if (!workspaceStore.workspacePath()) return false;
-    if (workspaceStore.workflowType() === "skill-package") {
-      return packagesStore.selectedPackages().length > 0;
-    }
-    return workspaceStore.sourceVersion() !== "" && workspaceStore.targetVersion() !== "";
+    if (!pathIsValid()) return false;
+    if (packagesStore.selectedPackages().length === 0) return false;
+    if (installStore.prerequisitesChecked() && !installStore.allPrerequisitesMet()) return false;
+    return true;
   }
 
-  // Listen for install-progress events from Tauri backend
+  // Run prerequisites check on mount
+  onMount(async () => {
+    if (!installStore.prerequisitesChecked()) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const report = await invoke<{
+          checks: Array<{
+            name: string;
+            command: string;
+            required: boolean;
+            found: boolean;
+            version: string | null;
+            installHint: string;
+          }>;
+          allRequiredOk: boolean;
+        }>("check_prerequisites");
+        installStore.setPrerequisites(
+          report.checks.map((c) => ({
+            id: c.command,
+            name: c.name,
+            required: c.required,
+            found: c.found,
+            version: c.version ?? undefined,
+            installHint: c.installHint,
+          }))
+        );
+        installStore.setPrerequisitesChecked(true);
+      } catch {
+        // Not in Tauri, skip
+      }
+    }
+  });
+
+  // Listen for install-progress events
   onMount(async () => {
     try {
       const { listen } = await import("@tauri-apps/api/event");
@@ -65,43 +133,63 @@ export function InstallPage() {
         });
       });
       onCleanup(() => unlisten());
-    } catch {
-      // Not running in Tauri environment
-    }
+    } catch {}
   });
 
-  async function handleInstall() {
+  async function handleScanAndInstall() {
     if (!canInstall()) return;
     installStore.resetInstall();
+
+    // Scan for conflicts first
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = await invoke<{
+        conflicts: Array<{ path: string; kind: string; description: string; existingSize: number | null }>;
+        hasConflicts: boolean;
+      }>("scan_conflicts", {
+        path: workspaceStore.workspacePath(),
+        packages: packagesStore.selectedPackages(),
+        name: workspaceStore.projectName?.() ?? "",
+      });
+
+      if (result.hasConflicts) {
+        installStore.setConflicts(result.conflicts);
+        installStore.setInstallStatus("conflicts");
+        return;
+      }
+    } catch {
+      // If scan fails (not in Tauri), proceed directly
+    }
+
+    await doInstall();
+  }
+
+  async function doInstall() {
     installStore.setInstallStatus("installing");
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const result = await invoke("install_workspace", {
         request: {
-          workflowType: workspaceStore.workflowType(),
+          workflowType: "skill-package",
           path: workspaceStore.workspacePath(),
-          name: workspaceStore.projectName(),
-          effort: workspaceStore.effortLevel(),
-          packages: workspaceStore.workflowType() === "skill-package" ? packagesStore.selectedPackages() : undefined,
-          sourceVersion: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.sourceVersion() : undefined,
-          targetVersion: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetVersion() : undefined,
-          targetRepo: workspaceStore.workflowType() === "version-upgrade" ? workspaceStore.targetRepo() : undefined,
+          name: workspaceStore.projectName?.() ?? "",
+          effort: workspaceStore.effortLevel?.() ?? "medium",
+          packages: packagesStore.selectedPackages(),
           initGit: true,
           openVscode: false,
           coreFiles: [],
           permissions: [],
+          conflictStrategy: installStore.conflictStrategy(),
         },
       });
       installStore.setInstallResult(result as any);
       installStore.setInstallStatus("success");
-      // Mark all steps as done
       installStore.setInstallSteps((prev) =>
         prev.map((s) => ({ ...s, status: "done" as const }))
       );
     } catch (e) {
       installStore.setInstallError(e instanceof Error ? e.message : String(e));
       installStore.setInstallStatus("error");
-      // Mark last active step as error
       installStore.setInstallSteps((prev) => {
         const lastActive = [...prev].reverse().find((s) => s.status === "active");
         if (lastActive) {
@@ -122,170 +210,264 @@ export function InstallPage() {
         const wsFile = workspaceStore.workspacePath() + "/" + result.workspaceFile;
         await invoke("open_in_vscode", { path: wsFile });
       }
-    } catch {
-      // Ignore
-    }
+    } catch {}
   }
+
+  const strategyOptions: { id: ConflictStrategy; label: string; desc: string }[] = [
+    { id: "merge", label: "Merge", desc: "Add new skills, keep existing files" },
+    { id: "skip", label: "Skip", desc: "Only install what's missing" },
+    { id: "overwrite", label: "Overwrite", desc: "Replace everything" },
+  ];
 
   return (
     <div class="content-body">
       <div class="content-scroll">
         {/* Selected packages summary */}
-        <Show when={workspaceStore.workflowType() === "skill-package"}>
-          <div class="card">
-            <h2 class="card-title">Selected Packages</h2>
-            <div class="preview-stats">
-              <div class="stat">
-                <span class="stat-value">{selectedPackageObjects().length}</span>
-                <span class="stat-label">Packages</span>
-              </div>
-              <div class="stat">
-                <span class="stat-value">{totalSkills()}</span>
-                <span class="stat-label">Skills</span>
-              </div>
-              <div class="stat">
-                <span class="stat-value">{publishedCount()}</span>
-                <span class="stat-label">Published</span>
-              </div>
+        <div class="card">
+          <h2 class="card-title">Install Summary</h2>
+          <div class="preview-stats">
+            <div class="stat">
+              <span class="stat-value">{selectedPackageObjects().length}</span>
+              <span class="stat-label">Packages</span>
             </div>
-
-            <Show
-              when={selectedPackageObjects().length > 0}
-              fallback={
-                <div class="empty-state">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                  </svg>
-                  <p>No packages selected</p>
-                  <small>Go to Packages to select skill packages</small>
-                </div>
-              }
-            >
-              <div class="preview-list" style={{ "margin-top": "var(--sp-3)" }}>
-                <For each={selectedPackageObjects()}>
-                  {(pkg) => (
-                    <div class="preview-item">
-                      <span class="preview-name">{pkg.name}</span>
-                      <div class="flex items-center gap-2">
-                        <span class="preview-skills">{pkg.skillCount} skills</span>
-                        <button
-                          class="btn btn-ghost btn-sm"
-                          onClick={() => packagesStore.removePackage(pkg.id)}
-                          aria-label={`Remove ${pkg.name}`}
-                          style={{ padding: "2px 4px", "min-width": "auto" }}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </div>
-        </Show>
-
-        {/* Version upgrade summary */}
-        <Show when={workspaceStore.workflowType() === "version-upgrade"}>
-          <div class="card">
-            <h2 class="card-title">Upgrade Summary</h2>
-            <div class="preview-stats">
-              <div class="stat">
-                <span class="stat-value">{currentWorkflow().outputFiles.length}</span>
-                <span class="stat-label">Files</span>
-              </div>
-              <div class="stat">
-                <span class="stat-value">7</span>
-                <span class="stat-label">Phases</span>
-              </div>
-            </div>
-            <div style={{ "margin-top": "var(--sp-3)", "font-size": "0.85rem" }}>
-              <Show when={workspaceStore.sourceVersion()}>
-                <p class="text-dim">
-                  <strong style={{ color: "var(--text-primary)" }}>From:</strong> {workspaceStore.sourceVersion()}
-                  {" "}<strong style={{ color: "var(--text-primary)" }}>To:</strong> {workspaceStore.targetVersion()}
-                </p>
-              </Show>
-              <Show when={workspaceStore.targetRepo()}>
-                <p class="text-dim font-mono" style={{ "margin-top": "var(--sp-1)", "font-size": "0.75rem" }}>
-                  {workspaceStore.targetRepo()}
-                </p>
-              </Show>
+            <div class="stat">
+              <span class="stat-value">{totalSkills()}</span>
+              <span class="stat-label">Skills</span>
             </div>
           </div>
-        </Show>
 
-        {/* Generated files list */}
-        <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
-          <h2 class="card-title">Generated Files</h2>
-          <div class="preview-output">
-            <ul>
-              <For each={currentWorkflow().outputFiles}>
-                {(file) => <li><code>{file}</code></li>}
-              </For>
-            </ul>
-          </div>
-          <Show when={enabledCoreFiles().length > 0}>
-            <h3 style={{ "font-size": "0.85rem", "margin-top": "var(--sp-3)", "margin-bottom": "var(--sp-2)", color: "var(--text-dim)" }}>
-              Core files:
-            </h3>
-            <ul style={{ "list-style": "none", "font-size": "0.8rem" }}>
-              <For each={enabledCoreFiles()}>
-                {(file) => (
-                  <li style={{ padding: "var(--sp-1) 0", color: "var(--text-dim)" }}>
-                    <code class="font-mono">{file.name}</code>
-                  </li>
+          <Show
+            when={selectedPackageObjects().length > 0}
+            fallback={
+              <div class="empty-state">
+                <p>No packages selected</p>
+                <small>Go to Workspace to select skill packages</small>
+              </div>
+            }
+          >
+            <div class="preview-list" style={{ "margin-top": "var(--sp-3)" }}>
+              <For each={selectedPackageObjects()}>
+                {(pkg) => (
+                  <div class="preview-item">
+                    <span class="preview-name">{pkg.name}</span>
+                    <span class="preview-skills">{pkg.skillCount} skills</span>
+                  </div>
                 )}
               </For>
-            </ul>
+            </div>
+          </Show>
+
+        </div>
+
+        {/* Workspace location */}
+        <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
+          <h2 class="card-title">Install Location</h2>
+          <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
+            Kies de map waar je workspace aangemaakt wordt. Skills worden geinstalleerd in .claude/skills/.
+          </p>
+
+          <button
+            class="btn btn-primary"
+            style={{ width: "100%", "margin-bottom": "var(--sp-2)", padding: "var(--sp-3)" }}
+            onClick={handleBrowse}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ "margin-right": "var(--sp-2)", "vertical-align": "middle" }}>
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            Kies map
+          </button>
+
+          <Show when={workspaceStore.workspacePath()}>
+            <div style={{
+              display: "flex",
+              "align-items": "center",
+              gap: "var(--sp-2)",
+              padding: "var(--sp-2) var(--sp-3)",
+              background: "var(--bg-input)",
+              "border-radius": "var(--radius)",
+              "border": "1px solid var(--border)",
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <code class="font-mono" style={{ "font-size": "0.8rem", flex: 1, "word-break": "break-all" }}>
+                {workspaceStore.workspacePath()}
+              </code>
+              <button
+                class="btn btn-ghost"
+                style={{ padding: "2px 6px", "font-size": "0.7rem" }}
+                onClick={() => { workspaceStore.setWorkspacePath(""); workspaceStore.setPathValidation(null); }}
+              >
+                Wijzig
+              </button>
+            </div>
+          </Show>
+
+          {/* Path validation */}
+          <Show when={workspaceStore.workspacePath()}>
+            <div style={{ "margin-top": "var(--sp-2)", display: "flex", "align-items": "center", gap: "var(--sp-2)" }}>
+              <Show when={validation()} fallback={
+                <span class="text-muted" style={{ "font-size": "0.75rem" }}>Validating...</span>
+              }>
+                {(v) => (
+                  <>
+                    <Show when={v().exists && v().is_dir && v().is_writable}>
+                      <span class="dot valid" />
+                      <span style={{ color: "var(--success)", "font-size": "0.75rem" }}>Valid path</span>
+                    </Show>
+                    <Show when={v().exists && v().is_dir && !v().is_writable}>
+                      <span class="dot error" />
+                      <span style={{ color: "var(--error)", "font-size": "0.75rem" }}>Not writable</span>
+                    </Show>
+                    <Show when={!v().exists}>
+                      <span class="dot error" />
+                      <span style={{ color: "var(--error)", "font-size": "0.75rem" }}>Does not exist</span>
+                      <button class="btn btn-ghost btn-sm" style={{ "font-size": "0.7rem" }} onClick={handleCreateDirectory}>
+                        Create
+                      </button>
+                    </Show>
+                    <Show when={v().has_claude_dir}>
+                      <span class="text-muted" style={{ "font-size": "0.7rem", "margin-left": "var(--sp-2)" }}>
+                        (has .claude config)
+                      </span>
+                    </Show>
+                  </>
+                )}
+              </Show>
+            </div>
           </Show>
         </div>
 
         {/* Prerequisites check */}
-        <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
-          <h2 class="card-title">Prerequisites</h2>
-          <Show
-            when={installStore.prerequisites().length > 0}
-            fallback={
-              <div class="empty-state" style={{ padding: "var(--sp-4)" }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                <p>Prerequisite checks will run before install</p>
-              </div>
-            }
-          >
-            <For each={installStore.prerequisites()}>
-              {(prereq) => (
-                <div class="config-item" style={{
-                  display: "flex",
-                  "justify-content": "space-between",
-                  "align-items": "center",
-                  padding: "var(--sp-2) var(--sp-3)",
-                  background: "var(--bg-input)",
-                  "border-radius": "var(--radius-sm)",
-                  "margin-bottom": "var(--sp-2)",
-                }}>
-                  <div>
-                    <strong style={{ "font-size": "0.85rem" }}>{prereq.name}</strong>
-                    <Show when={prereq.version}>
-                      <small class="text-dim font-mono" style={{ "margin-left": "var(--sp-2)" }}>{prereq.version}</small>
-                    </Show>
+        <Show when={installStore.prerequisitesChecked()}>
+          <div class="card" style={{
+            "margin-top": "var(--sp-4)",
+            "border-left": `3px solid ${installStore.allPrerequisitesMet() ? "var(--success)" : "var(--error)"}`,
+          }}>
+            <h2 class="card-title" style={{
+              color: installStore.allPrerequisitesMet() ? "var(--success)" : "var(--error)"
+            }}>
+              {installStore.allPrerequisitesMet() ? "Prerequisites OK" : "Missing Prerequisites"}
+            </h2>
+            <div class="prereq-grid">
+              <For each={installStore.prerequisites()}>
+                {(prereq) => (
+                  <div class="prereq-item">
+                    <span class={`prereq-dot ${prereq.found ? "ok" : prereq.required ? "missing" : "optional"}`} />
+                    <div class="prereq-info">
+                      <div style={{ display: "flex", "align-items": "center", gap: "var(--sp-2)" }}>
+                        <strong style={{ "font-size": "0.8rem" }}>{prereq.name}</strong>
+                        <Show when={prereq.required}>
+                          <span class="text-muted" style={{ "font-size": "0.65rem" }}>required</span>
+                        </Show>
+                      </div>
+                      <Show when={prereq.found && prereq.version}>
+                        <span class="font-mono text-dim" style={{ "font-size": "0.7rem" }}>{prereq.version}</span>
+                      </Show>
+                      <Show when={!prereq.found && prereq.installHint}>
+                        <code class="font-mono" style={{ "font-size": "0.65rem", color: "var(--accent)" }}>
+                          {prereq.installHint}
+                        </code>
+                      </Show>
+                    </div>
+                    <span style={{
+                      "font-size": "0.75rem",
+                      color: prereq.found ? "var(--success)" : prereq.required ? "var(--error)" : "var(--text-muted)",
+                    }}>
+                      {prereq.found ? "\u2713" : prereq.required ? "\u2717" : "\u2014"}
+                    </span>
                   </div>
-                  <span style={{ color: prereq.found ? "var(--success)" : prereq.required ? "var(--error)" : "var(--text-muted)", "font-size": "0.75rem" }}>
-                    {prereq.found ? "Found" : prereq.required ? "Missing" : "Optional"}
-                  </span>
-                </div>
-              )}
-            </For>
-          </Show>
-        </div>
+                )}
+              </For>
+            </div>
+            <Show when={!installStore.allPrerequisitesMet()}>
+              <p class="text-dim" style={{ "margin-top": "var(--sp-3)", "font-size": "0.8rem" }}>
+                Install the missing required tools and refresh to continue.
+              </p>
+              <button
+                class="btn btn-secondary btn-sm"
+                style={{ "margin-top": "var(--sp-2)" }}
+                onClick={async () => {
+                  installStore.setPrerequisitesChecked(false);
+                  try {
+                    const { invoke } = await import("@tauri-apps/api/core");
+                    const report = await invoke<any>("check_prerequisites");
+                    installStore.setPrerequisites(
+                      report.checks.map((c: any) => ({
+                        id: c.command,
+                        name: c.name,
+                        required: c.required,
+                        found: c.found,
+                        version: c.version ?? undefined,
+                        installHint: c.installHint,
+                      }))
+                    );
+                    installStore.setPrerequisitesChecked(true);
+                  } catch {}
+                }}
+              >
+                Re-check
+              </button>
+            </Show>
+          </div>
+        </Show>
+
+        {/* Conflict resolution UI */}
+        <Show when={installStore.installStatus() === "conflicts"}>
+          <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--warm-gold)" }}>
+            <h2 class="card-title" style={{ color: "var(--warm-gold)" }}>
+              Existing Files Detected
+            </h2>
+            <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
+              The workspace already contains {installStore.conflicts().length} file(s) that would be affected.
+            </p>
+
+            {/* Conflict list */}
+            <div class="conflict-list">
+              <For each={installStore.conflicts()}>
+                {(conflict) => (
+                  <div class="conflict-item">
+                    <div class="conflict-icon">
+                      {conflict.kind === "skills" ? "\u{1F4E6}" : "\u{1F4C4}"}
+                    </div>
+                    <div class="conflict-info">
+                      <code class="font-mono" style={{ "font-size": "0.75rem" }}>{conflict.path}</code>
+                      <span class="text-muted" style={{ "font-size": "0.7rem" }}>{conflict.description}</span>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </div>
+
+            {/* Strategy selector */}
+            <div style={{ "margin-top": "var(--sp-4)" }}>
+              <label class="form-label">How to handle conflicts:</label>
+              <div class="strategy-options">
+                <For each={strategyOptions}>
+                  {(opt) => (
+                    <button
+                      class={`strategy-option ${installStore.conflictStrategy() === opt.id ? "active" : ""}`}
+                      onClick={() => installStore.setConflictStrategy(opt.id)}
+                    >
+                      <strong>{opt.label}</strong>
+                      <span class="text-dim" style={{ "font-size": "0.7rem" }}>{opt.desc}</span>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ "margin-top": "var(--sp-4)", display: "flex", gap: "var(--sp-2)" }}>
+              <button class="btn btn-generate" onClick={doInstall}>
+                Continue with {installStore.conflictStrategy()}
+              </button>
+              <button class="btn btn-ghost" onClick={() => installStore.resetInstall()}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Show>
 
         {/* Installation progress */}
         <Show when={installStore.installStatus() === "installing"}>
@@ -310,17 +492,14 @@ export function InstallPage() {
         </Show>
 
         {/* Validation warnings */}
-        <Show when={!canInstall() && installStore.installStatus() !== "installing"}>
+        <Show when={!canInstall() && installStore.installStatus() === "idle"}>
           <div class="card" style={{ "margin-top": "var(--sp-4)", "border-left": "3px solid var(--warm-gold)" }}>
             <p class="text-dim" style={{ "font-size": "0.8rem" }}>
               <Show when={!workspaceStore.workspacePath()}>
-                Set a workspace path on the Workspace page to continue.
+                Set a workspace path to continue.
               </Show>
-              <Show when={workspaceStore.workspacePath() && workspaceStore.workflowType() === "skill-package" && packagesStore.selectedPackages().length === 0}>
-                Select at least one package on the Packages page.
-              </Show>
-              <Show when={workspaceStore.workspacePath() && workspaceStore.workflowType() === "version-upgrade" && (workspaceStore.sourceVersion() === "" || workspaceStore.targetVersion() === "")}>
-                Configure source and target versions on the Workspace page.
+              <Show when={workspaceStore.workspacePath() && packagesStore.selectedPackages().length === 0}>
+                Select at least one package.
               </Show>
             </p>
           </div>
@@ -335,15 +514,17 @@ export function InstallPage() {
             </p>
             <p class="text-dim" style={{ "font-size": "0.8rem", "margin-top": "var(--sp-1)" }}>
               {installStore.installResult()!.filesCreated.length} files created
+              <Show when={installStore.installResult()!.filesSkipped.length > 0}>
+                {" "}&middot; {installStore.installResult()!.filesSkipped.length} skipped
+              </Show>
               <Show when={(installStore.installResult() as any)?.packagesInstalled?.length > 0}>
-                {" "}&middot; {(installStore.installResult() as any).packagesInstalled.length} packages installed
+                {" "}&middot; {(installStore.installResult() as any).packagesInstalled.length} packages
               </Show>
               <Show when={(installStore.installResult() as any)?.skillsTotal > 0}>
                 {" "}&middot; {(installStore.installResult() as any).skillsTotal} skills
               </Show>
             </p>
 
-            {/* Completed progress steps */}
             <Show when={installStore.installSteps().length > 0}>
               <div class="install-progress" style={{ "margin-top": "var(--sp-3)" }}>
                 <For each={installStore.installSteps()}>
@@ -361,11 +542,6 @@ export function InstallPage() {
 
             <div style={{ "margin-top": "var(--sp-4)", display: "flex", gap: "var(--sp-3)" }}>
               <button class="btn-success" onClick={handleOpenVSCode}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ "margin-right": "6px", "vertical-align": "middle" }}>
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
                 Open in VS Code
               </button>
             </div>
@@ -379,8 +555,6 @@ export function InstallPage() {
             <p class="text-dim font-mono" style={{ "font-size": "0.8rem" }}>
               {installStore.installError()}
             </p>
-
-            {/* Show progress steps with error */}
             <Show when={installStore.installSteps().length > 0}>
               <div class="install-progress" style={{ "margin-top": "var(--sp-3)" }}>
                 <For each={installStore.installSteps()}>
@@ -399,28 +573,25 @@ export function InstallPage() {
         </Show>
 
         {/* Install button */}
-        <div style={{ "margin-top": "var(--sp-4)", "padding-bottom": "var(--sp-4)" }}>
-          <button
-            class="btn btn-generate"
-            style={{ width: "100%" }}
-            onClick={handleInstall}
-            disabled={installStore.isInstalling() || !canInstall()}
-          >
-            <Show when={!installStore.isInstalling()} fallback={
-              <>
-                <span class="spinner" />
-                Installing...
-              </>
-            }>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="16 16 12 12 8 16" />
-                <line x1="12" y1="12" x2="12" y2="21" />
-                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-              </svg>
-              {buttonLabel()}
-            </Show>
-          </button>
-        </div>
+        <Show when={installStore.installStatus() !== "conflicts"}>
+          <div style={{ "margin-top": "var(--sp-4)", "padding-bottom": "var(--sp-4)" }}>
+            <button
+              class="btn btn-generate"
+              style={{ width: "100%" }}
+              onClick={handleScanAndInstall}
+              disabled={installStore.isInstalling() || !canInstall()}
+            >
+              <Show when={!installStore.isInstalling()} fallback={
+                <>
+                  <span class="spinner" />
+                  Installing...
+                </>
+              }>
+                Install Workspace
+              </Show>
+            </button>
+          </div>
+        </Show>
       </div>
     </div>
   );

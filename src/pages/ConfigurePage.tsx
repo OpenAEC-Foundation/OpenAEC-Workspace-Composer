@@ -6,6 +6,65 @@ import { settingsSchema, defaultPermissions } from "../lib/claude-settings-schem
 import { mcpServerTemplates, mcpCategoryLabels, type McpServerTemplate } from "../lib/mcp-servers";
 import { hookTemplates } from "../lib/hooks-templates";
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+function SaveButton(props: { onClick: () => void; status: SaveStatus; errorMsg?: string }) {
+  const label = () => {
+    switch (props.status) {
+      case "saving": return "Saving...";
+      case "saved": return "Saved!";
+      case "error": return "Error";
+      default: return "Save to workspace";
+    }
+  };
+  const btnClass = () => {
+    switch (props.status) {
+      case "saved": return "btn btn-success";
+      case "error": return "btn btn-ghost";
+      default: return "btn btn-primary";
+    }
+  };
+
+  return (
+    <div style={{ "margin-top": "var(--sp-3)" }}>
+      <button
+        class={btnClass()}
+        onClick={props.onClick}
+        disabled={props.status === "saving"}
+        style={{ width: "100%" }}
+      >
+        {label()}
+      </button>
+      <Show when={props.status === "error" && props.errorMsg}>
+        <p style={{ color: "var(--error)", "font-size": "0.75rem", "margin-top": "var(--sp-1)" }}>
+          {props.errorMsg}
+        </p>
+      </Show>
+      <Show when={props.status === "saved"}>
+        <p style={{ color: "var(--success)", "font-size": "0.75rem", "margin-top": "var(--sp-1)" }}>
+          File written to workspace directory.
+        </p>
+      </Show>
+    </div>
+  );
+}
+
+async function invokeWrite(command: string, args: Record<string, unknown>): Promise<void> {
+  const wsPath = workspaceStore.workspacePath();
+  if (!wsPath) {
+    throw new Error("Set a workspace path first");
+  }
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke(command, { path: wsPath, ...args });
+  } catch (e) {
+    if (String(e).includes("not a function") || String(e).includes("window.__TAURI")) {
+      throw new Error("Save only works in desktop app");
+    }
+    throw e;
+  }
+}
+
 type ConfigTab = "claude-md" | "settings" | "mcp" | "hooks" | "core-files";
 
 // Protocol definitions
@@ -86,6 +145,8 @@ export function ConfigurePage() {
    Tab 1: CLAUDE.md Builder
    ================================================================ */
 function ClaudeMdTab() {
+  const [saveStatus, setSaveStatus] = createSignal<SaveStatus>("idle");
+  const [saveError, setSaveError] = createSignal("");
   const sections = () => configStore.claudeMdSections();
 
   // Auto-populate stack from selected packages
@@ -338,6 +399,22 @@ function ClaudeMdTab() {
           </span>
         </div>
         {claudeMdPreview()}
+        <SaveButton
+          status={saveStatus()}
+          errorMsg={saveError()}
+          onClick={async () => {
+            setSaveStatus("saving");
+            setSaveError("");
+            try {
+              await invokeWrite("write_claude_md", { content: claudeMdPreview() });
+              setSaveStatus("saved");
+              setTimeout(() => setSaveStatus("idle"), 3000);
+            } catch (e) {
+              setSaveStatus("error");
+              setSaveError(e instanceof Error ? e.message : String(e));
+            }
+          }}
+        />
       </div>
     </div>
   );
@@ -347,6 +424,8 @@ function ClaudeMdTab() {
    Tab 2: Permissions
    ================================================================ */
 function SettingsTab() {
+  const [saveStatus, setSaveStatus] = createSignal<SaveStatus>("idle");
+  const [saveError, setSaveError] = createSignal("");
   const [customInput, setCustomInput] = createSignal("");
   const permissions = createMemo(() => configStore.settings().permissions);
   const customPermissions = createMemo(
@@ -520,6 +599,22 @@ function SettingsTab() {
           </span>
         </div>
         {settingsPreview()}
+        <SaveButton
+          status={saveStatus()}
+          errorMsg={saveError()}
+          onClick={async () => {
+            setSaveStatus("saving");
+            setSaveError("");
+            try {
+              await invokeWrite("write_settings_json", { settings: JSON.parse(settingsPreview()) });
+              setSaveStatus("saved");
+              setTimeout(() => setSaveStatus("idle"), 3000);
+            } catch (e) {
+              setSaveStatus("error");
+              setSaveError(e instanceof Error ? e.message : String(e));
+            }
+          }}
+        />
       </div>
     </div>
   );
@@ -529,6 +624,8 @@ function SettingsTab() {
    Tab 3: MCP Servers
    ================================================================ */
 function McpTab() {
+  const [saveStatus, setSaveStatus] = createSignal<SaveStatus>("idle");
+  const [saveError, setSaveError] = createSignal("");
   const grouped = createMemo(() => {
     const groups: Record<string, McpServerTemplate[]> = {};
     for (const server of mcpServerTemplates) {
@@ -691,6 +788,26 @@ function McpTab() {
           </span>
         </div>
         {mcpJsonPreview()}
+        <SaveButton
+          status={saveStatus()}
+          errorMsg={saveError()}
+          onClick={async () => {
+            setSaveStatus("saving");
+            setSaveError("");
+            try {
+              const preview = mcpJsonPreview();
+              if (preview.startsWith("//")) {
+                throw new Error("No MCP servers configured to save");
+              }
+              await invokeWrite("write_mcp_json", { config: JSON.parse(preview) });
+              setSaveStatus("saved");
+              setTimeout(() => setSaveStatus("idle"), 3000);
+            } catch (e) {
+              setSaveStatus("error");
+              setSaveError(e instanceof Error ? e.message : String(e));
+            }
+          }}
+        />
       </div>
     </div>
   );
@@ -711,6 +828,8 @@ const HOOK_EVENTS: { value: HookEvent; label: string }[] = [
 ];
 
 function HooksTab() {
+  const [saveStatus, setSaveStatus] = createSignal<SaveStatus>("idle");
+  const [saveError, setSaveError] = createSignal("");
   const [showForm, setShowForm] = createSignal(false);
   const [editingId, setEditingId] = createSignal<string | null>(null);
 
@@ -994,6 +1113,26 @@ function HooksTab() {
           </span>
         </div>
         {hooksPreview()}
+        <SaveButton
+          status={saveStatus()}
+          errorMsg={saveError()}
+          onClick={async () => {
+            setSaveStatus("saving");
+            setSaveError("");
+            try {
+              const preview = hooksPreview();
+              if (preview.startsWith("//")) {
+                throw new Error("No hooks configured to save");
+              }
+              await invokeWrite("write_settings_json", { settings: JSON.parse(preview) });
+              setSaveStatus("saved");
+              setTimeout(() => setSaveStatus("idle"), 3000);
+            } catch (e) {
+              setSaveStatus("error");
+              setSaveError(e instanceof Error ? e.message : String(e));
+            }
+          }}
+        />
       </div>
     </div>
   );

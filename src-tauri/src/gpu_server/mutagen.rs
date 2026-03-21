@@ -10,11 +10,24 @@ pub struct MutagenSessionInfo {
     pub remote_path: String,
 }
 
+fn find_mutagen() -> String {
+    // Check common locations on Windows
+    if let Ok(home) = std::env::var("USERPROFILE") {
+        let cargo_bin = format!("{}/.cargo/bin/mutagen.exe", home);
+        if std::path::Path::new(&cargo_bin).exists() {
+            return cargo_bin;
+        }
+    }
+    // Fall back to PATH lookup
+    "mutagen".to_string()
+}
+
 fn run_mutagen(args: &[&str]) -> Result<String, String> {
-    let output = Command::new("mutagen")
+    let mutagen_path = find_mutagen();
+    let output = Command::new(&mutagen_path)
         .args(args)
         .output()
-        .map_err(|e| format!("Mutagen not found or failed to start: {}", e))?;
+        .map_err(|e| format!("Mutagen not found at '{}': {}", mutagen_path, e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())

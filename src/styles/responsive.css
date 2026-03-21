@@ -1,0 +1,28 @@
+/* ============================================================
+   Responsive / Media Queries
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .package-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsive: 2 columns on narrow */
+@media (max-width: 700px) {
+  .tile-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tile-wide {
+    grid-column: span 2;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

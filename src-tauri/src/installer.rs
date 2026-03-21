@@ -14,6 +14,24 @@ pub struct InstallProgress {
     pub detail: String,
 }
 
+/// A single file or directory that would conflict during install
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Conflict {
+    pub path: String,
+    pub kind: String,        // "file" | "directory" | "skills"
+    pub description: String,
+    pub existing_size: Option<u64>,
+}
+
+/// Result of a pre-install conflict scan
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictScanResult {
+    pub conflicts: Vec<Conflict>,
+    pub has_conflicts: bool,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstallRequest {
@@ -29,6 +47,8 @@ pub struct InstallRequest {
     pub open_vscode: Option<bool>,
     pub core_files: Option<Vec<String>>,
     pub permissions: Option<Vec<String>>,
+    /// How to handle conflicts: "skip" | "overwrite" | "merge"
+    pub conflict_strategy: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -36,6 +56,7 @@ pub struct InstallRequest {
 pub struct InstallResult {
     pub workspace_file: String,
     pub files_created: Vec<String>,
+    pub files_skipped: Vec<String>,
     pub packages_installed: Vec<String>,
     pub skills_total: u32,
 }
@@ -55,7 +76,7 @@ fn emit_progress(app: &AppHandle, step: &str, current: u32, total: u32, detail: 
 fn package_repo_dir(package_id: &str) -> &str {
     match package_id {
         "blender-bonsai" => "Blender-Bonsai-ifcOpenshell-Sverchok-Claude-Skill-Package",
-        "frappe" | "erpnext" => "Frappe_Claude_Skill_Package",
+        "frappe" | "erpnext" => "ERPNext_Anthropic_Claude_Development_Skill_Package",
         "open-pdf-studio" => "Open-PDF-Studio-Claude-Skill-Package",
         "tauri-2" => "Tauri-2-Claude-Skill-Package",
         "react" => "React-Claude-Skill-Package",
@@ -75,6 +96,116 @@ fn package_repo_dir(package_id: &str) -> &str {
         "cross-tech" | "cross-tech-aec" => "Cross-Tech-AEC-Claude-Skill-Package",
         _ => package_id,
     }
+}
+
+/// Skill info returned from scanning a package
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillInfo {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub path: String,
+}
+
+/// List all skills inside a package by scanning its skills/source/ directory
+#[tauri::command]
+pub fn list_package_skills(package_id: String) -> Result<Vec<SkillInfo>, String> {
+    let repo_dir_name = package_repo_dir(&package_id);
+    let home = std::env::var("USERPROFILE").unwrap_or_default();
+    let base = std::path::PathBuf::from(&home)
+        .join("Documents")
+        .join("GitHub")
+        .join(repo_dir_name);
+
+    let skills_dir = if base.join("skills").join("source").exists() {
+        base.join("skills").join("source")
+    } else if base.join("skills").exists() {
+        base.join("skills")
+    } else {
+        return Err(format!("Package {} not found locally at {}", package_id, base.display()));
+    };
+
+    let mut skills = Vec::new();
+    scan_skills_recursive(&skills_dir, "", &mut skills);
+    skills.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(skills)
+}
+
+fn scan_skills_recursive(dir: &std::path::Path, category: &str, skills: &mut Vec<SkillInfo>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        if name.starts_with('.') || name == "references" {
+            continue;
+        }
+
+        if path.is_dir() {
+            let skill_md = path.join("SKILL.md");
+            if skill_md.exists() {
+                // This is a skill directory
+                let (desc, parsed_name) = parse_skill_md_header(&skill_md);
+                skills.push(SkillInfo {
+                    id: name.clone(),
+                    name: parsed_name.unwrap_or_else(|| name.clone()),
+                    description: desc,
+                    category: category.to_string(),
+                    path: path.to_string_lossy().to_string(),
+                });
+            } else {
+                // This is a category directory, recurse
+                scan_skills_recursive(&path, &name, skills);
+            }
+        }
+    }
+}
+
+fn parse_skill_md_header(path: &std::path::Path) -> (String, Option<String>) {
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return (String::new(), None),
+    };
+
+    let mut name = None;
+    let mut description = String::new();
+    let mut in_frontmatter = false;
+
+    for line in content.lines().take(20) {
+        let trimmed = line.trim();
+        if trimmed == "---" {
+            in_frontmatter = !in_frontmatter;
+            continue;
+        }
+        if in_frontmatter {
+            if trimmed.starts_with("name:") {
+                name = Some(trimmed.trim_start_matches("name:").trim().to_string());
+            }
+            if trimmed.starts_with("description:") {
+                let desc = trimmed.trim_start_matches("description:").trim();
+                if desc.starts_with('>') || desc.starts_with('|') {
+                    continue; // multiline, skip
+                }
+                description = desc.trim_matches('"').trim_matches('\'').to_string();
+            }
+        }
+    }
+
+    // Truncate description to first sentence
+    if let Some(dot_pos) = description.find(". ") {
+        description = description[..=dot_pos].to_string();
+    }
+    if description.len() > 120 {
+        description = format!("{}...", &description[..117]);
+    }
+
+    (description, name)
 }
 
 /// Map package ID to GitHub repo URL
@@ -154,8 +285,9 @@ fn resolve_skill_source(
     Err(format!("No skills directory found for {}", package_id))
 }
 
-/// Recursively copy a directory, preserving structure
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<u32, String> {
+/// Recursively copy a directory, respecting conflict strategy.
+/// strategy: "overwrite" (default), "skip" (skip existing), "merge" (skip existing files, recurse dirs)
+fn copy_dir_recursive(src: &Path, dst: &Path, strategy: &str, skipped: &mut Vec<String>) -> Result<u32, String> {
     fs::create_dir_all(dst).map_err(|e| format!("mkdir failed: {}", e))?;
     let mut count = 0u32;
 
@@ -167,12 +299,15 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<u32, String> {
         let dst_path = dst.join(&file_name);
 
         if src_path.is_dir() {
-            // Skip .git directories
             if file_name == ".git" {
                 continue;
             }
-            count += copy_dir_recursive(&src_path, &dst_path)?;
+            count += copy_dir_recursive(&src_path, &dst_path, strategy, skipped)?;
         } else {
+            if dst_path.exists() && strategy != "overwrite" {
+                skipped.push(dst_path.to_string_lossy().to_string());
+                continue;
+            }
             fs::copy(&src_path, &dst_path).map_err(|e| format!("copy failed: {}", e))?;
             if file_name == "SKILL.md" {
                 count += 1;
@@ -183,18 +318,214 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<u32, String> {
     Ok(count)
 }
 
-/// Install skills from a package into .claude/skills/{package-id}/
+/// Install skills from a package into .claude/skills/{package-id}--{skill-name}/
+/// Each skill directory (containing a SKILL.md) gets its own namespaced folder
+/// to follow the official Claude Code skill format and avoid conflicts.
 fn install_skills_to_workspace(
     package_id: &str,
     skills_source: &Path,
     workspace_path: &Path,
+    strategy: &str,
+    skipped: &mut Vec<String>,
 ) -> Result<u32, String> {
-    let target = workspace_path
-        .join(".claude")
-        .join("skills")
-        .join(package_id);
+    let skills_base = workspace_path.join(".claude").join("skills");
+    fs::create_dir_all(&skills_base)
+        .map_err(|e| format!("Failed to create .claude/skills/: {}", e))?;
 
-    copy_dir_recursive(skills_source, &target)
+    // Discover all skill directories (dirs containing SKILL.md)
+    let mut skill_dirs = Vec::new();
+    find_skill_dirs(skills_source, &mut skill_dirs, 0);
+
+    if skill_dirs.is_empty() {
+        // Fallback: copy entire source as a single skill directory
+        let target = skills_base.join(package_id);
+        return copy_dir_recursive(skills_source, &target, strategy, skipped);
+    }
+
+    let mut total_count = 0u32;
+    for skill_dir in &skill_dirs {
+        let skill_name = skill_dir
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        // Target: .claude/skills/<package-id>--<skill-name>/
+        let target_name = format!("{}--{}", package_id, skill_name);
+        let target = skills_base.join(&target_name);
+
+        // For "skip" strategy, skip if target already exists
+        if target.exists() && strategy == "skip" {
+            skipped.push(format!(".claude/skills/{}/", target_name));
+            continue;
+        }
+
+        match copy_dir_recursive(skill_dir, &target, strategy, skipped) {
+            Ok(count) => total_count += count,
+            Err(e) => {
+                eprintln!(
+                    "[install] Warning: failed to copy skill {}: {}",
+                    target_name, e
+                );
+            }
+        }
+    }
+
+    Ok(total_count)
+}
+
+/// Recursively find all directories containing a SKILL.md file.
+fn find_skill_dirs(dir: &Path, results: &mut Vec<PathBuf>, depth: u32) {
+    if depth > 5 {
+        return;
+    }
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.filter_map(|e| e.ok()) {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !path.is_dir() || name.starts_with('.') || name == "references" {
+            continue;
+        }
+        if path.join("SKILL.md").exists() {
+            results.push(path);
+        } else {
+            find_skill_dirs(&path, results, depth + 1);
+        }
+    }
+}
+
+/// Scan workspace for files that would conflict with installation
+#[tauri::command]
+pub async fn scan_conflicts(
+    path: String,
+    packages: Vec<String>,
+    name: String,
+) -> Result<ConflictScanResult, String> {
+    let workspace_path = PathBuf::from(&path);
+    let mut conflicts = Vec::new();
+
+    if !workspace_path.exists() {
+        return Ok(ConflictScanResult { conflicts, has_conflicts: false });
+    }
+
+    // Check CLAUDE.md
+    let claude_md = workspace_path.join("CLAUDE.md");
+    if claude_md.exists() {
+        let size = fs::metadata(&claude_md).map(|m| m.len()).ok();
+        conflicts.push(Conflict {
+            path: "CLAUDE.md".to_string(),
+            kind: "file".to_string(),
+            description: "Project configuration file already exists".to_string(),
+            existing_size: size,
+        });
+    }
+
+    // Check .claude/settings.local.json
+    let settings = workspace_path.join(".claude").join("settings.local.json");
+    if settings.exists() {
+        let size = fs::metadata(&settings).map(|m| m.len()).ok();
+        conflicts.push(Conflict {
+            path: ".claude/settings.local.json".to_string(),
+            kind: "file".to_string(),
+            description: "Claude settings already configured".to_string(),
+            existing_size: size,
+        });
+    }
+
+    // Check .code-workspace file
+    let ws_name = if name.is_empty() {
+        workspace_path.file_name().unwrap_or_default().to_string_lossy().to_string()
+    } else {
+        name
+    };
+    let ws_file = format!("{}.code-workspace", ws_name.to_lowercase().replace(' ', "-"));
+    let ws_path = workspace_path.join(&ws_file);
+    if ws_path.exists() {
+        let size = fs::metadata(&ws_path).map(|m| m.len()).ok();
+        conflicts.push(Conflict {
+            path: ws_file,
+            kind: "file".to_string(),
+            description: "VS Code workspace file already exists".to_string(),
+            existing_size: size,
+        });
+    }
+
+    // Check skill directories (new format: <package-id>--<skill-name>/)
+    let skills_dir = workspace_path.join(".claude").join("skills");
+    if skills_dir.exists() {
+        for pkg_id in &packages {
+            let prefix = format!("{}--", pkg_id);
+            if let Ok(entries) = fs::read_dir(&skills_dir) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.starts_with(&prefix) && entry.path().is_dir() {
+                        let file_count = count_files_recursive(&entry.path());
+                        conflicts.push(Conflict {
+                            path: format!(".claude/skills/{}/", name),
+                            kind: "skills".to_string(),
+                            description: format!("Skill directory exists ({} files)", file_count),
+                            existing_size: None,
+                        });
+                    }
+                }
+            }
+            // Also check legacy format (just package-id)
+            let legacy_dir = skills_dir.join(pkg_id);
+            if legacy_dir.exists() {
+                let skill_count = count_files_recursive(&legacy_dir);
+                conflicts.push(Conflict {
+                    path: format!(".claude/skills/{}/", pkg_id),
+                    kind: "skills".to_string(),
+                    description: format!("Legacy skills directory exists ({} files)", skill_count),
+                    existing_size: None,
+                });
+            }
+        }
+    }
+
+    // Check .gitignore
+    let gitignore = workspace_path.join(".gitignore");
+    if gitignore.exists() {
+        let size = fs::metadata(&gitignore).map(|m| m.len()).ok();
+        conflicts.push(Conflict {
+            path: ".gitignore".to_string(),
+            kind: "file".to_string(),
+            description: "Git ignore rules already exist".to_string(),
+            existing_size: size,
+        });
+    }
+
+    let has_conflicts = !conflicts.is_empty();
+    Ok(ConflictScanResult { conflicts, has_conflicts })
+}
+
+/// Count files recursively in a directory
+fn count_files_recursive(dir: &Path) -> u32 {
+    let mut count = 0;
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                count += count_files_recursive(&path);
+            } else {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+/// Write a file respecting conflict strategy. Returns true if written, false if skipped.
+fn write_with_strategy(path: &Path, content: &str, strategy: &str) -> Result<bool, String> {
+    if path.exists() && strategy == "skip" {
+        return Ok(false);
+    }
+    // "overwrite" and "merge" both write config files (merge only skips skills)
+    fs::write(path, content).map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+    Ok(true)
 }
 
 #[tauri::command]
@@ -205,6 +536,7 @@ pub async fn install_workspace(
     let workspace_path = PathBuf::from(&request.path);
     let packages = request.packages.unwrap_or_default();
     let permissions = request.permissions.unwrap_or_default();
+    let strategy = request.conflict_strategy.as_deref().unwrap_or("overwrite");
     let total_steps = 4 + packages.len() as u32;
 
     // Step 1: Create workspace directory
@@ -212,16 +544,16 @@ pub async fn install_workspace(
     fs::create_dir_all(&workspace_path)
         .map_err(|e| format!("Failed to create workspace: {}", e))?;
 
-    // Create .claude/skills/ directory
     let claude_skills_dir = workspace_path.join(".claude").join("skills");
     fs::create_dir_all(&claude_skills_dir)
         .map_err(|e| format!("Failed to create .claude/skills/: {}", e))?;
 
     let mut files_created = Vec::new();
+    let mut files_skipped = Vec::new();
     let mut packages_installed = Vec::new();
     let mut skills_total = 0u32;
 
-    // Step 2: Install each skill package into .claude/skills/
+    // Step 2: Install each skill package
     for (i, pkg_id) in packages.iter().enumerate() {
         let step = 2 + i as u32;
         emit_progress(
@@ -231,6 +563,8 @@ pub async fn install_workspace(
             total_steps,
             &format!("Resolving {}...", pkg_id),
         );
+
+        // Note: per-skill skip logic is handled inside install_skills_to_workspace
 
         match resolve_skill_source(pkg_id, &app) {
             Ok(source_dir) => {
@@ -244,14 +578,25 @@ pub async fn install_workspace(
                     &format!("Installing {}", pkg_id),
                     step,
                     total_steps,
-                    &format!("Installing {} ({}) → .claude/skills/{}/", pkg_id, method, pkg_id),
+                    &format!("Installing {} ({}) → .claude/skills/{}--*/", pkg_id, method, pkg_id),
                 );
 
-                match install_skills_to_workspace(pkg_id, &source_dir, &workspace_path) {
+                let mut pkg_skipped = Vec::new();
+                match install_skills_to_workspace(pkg_id, &source_dir, &workspace_path, strategy, &mut pkg_skipped) {
                     Ok(count) => {
                         skills_total += count;
                         packages_installed.push(pkg_id.clone());
                         files_created.push(format!(".claude/skills/{}/", pkg_id));
+                        if !pkg_skipped.is_empty() {
+                            emit_progress(
+                                &app,
+                                &format!("Installing {}", pkg_id),
+                                step,
+                                total_steps,
+                                &format!("{}: {} new, {} skipped", pkg_id, count, pkg_skipped.len()),
+                            );
+                        }
+                        files_skipped.extend(pkg_skipped);
                     }
                     Err(e) => {
                         emit_progress(
@@ -279,22 +624,33 @@ pub async fn install_workspace(
     // Step 3: Generate CLAUDE.md
     let claude_step = 2 + packages.len() as u32;
     emit_progress(&app, "Generating CLAUDE.md", claude_step, total_steps, "Writing project configuration...");
-    if let Ok(f) = generate_claude_md(&workspace_path, &request.name, &packages_installed, &request.effort) {
-        files_created.push(f);
+    match generate_claude_md(&workspace_path, &request.name, &packages_installed, &request.effort, strategy) {
+        Ok(Some(f)) => files_created.push(f),
+        Ok(None) => files_skipped.push("CLAUDE.md".to_string()),
+        Err(_) => {}
     }
 
     // Step 4: Generate .claude/settings.local.json
     emit_progress(&app, "Generating settings", claude_step + 1, total_steps, "Writing .claude/settings.local.json...");
-    if let Ok(f) = generate_settings_json(&workspace_path, &permissions) {
-        files_created.push(f);
+    match generate_settings_json(&workspace_path, &permissions, strategy) {
+        Ok(Some(f)) => files_created.push(f),
+        Ok(None) => files_skipped.push(".claude/settings.local.json".to_string()),
+        Err(_) => {}
     }
 
     // Step 5: Generate .code-workspace file
     emit_progress(&app, "Generating workspace file", claude_step + 2, total_steps, "Writing .code-workspace...");
-    let workspace_file = generate_workspace_file(&workspace_path, &request.name, &packages_installed)?;
-    files_created.push(workspace_file.clone());
+    match generate_workspace_file(&workspace_path, &request.name, &packages_installed, strategy) {
+        Ok(Some(f)) => {
+            files_created.push(f.clone());
+        }
+        Ok(None) => {
+            // skipped, but we still need a workspace_file name for the result
+        }
+        Err(e) => return Err(e),
+    }
 
-    // Generate .gitignore
+    // Generate .gitignore (always skip-if-exists)
     if let Ok(Some(g)) = generate_gitignore(&workspace_path) {
         files_created.push(g);
     }
@@ -308,25 +664,33 @@ pub async fn install_workspace(
     }
 
     // Optional: open in VS Code
+    let ws_name = if request.name.is_empty() {
+        workspace_path.file_name().unwrap_or_default().to_string_lossy().to_string()
+    } else {
+        request.name.clone()
+    };
+    let workspace_file = format!("{}.code-workspace", ws_name.to_lowercase().replace(' ', "-"));
+
     if request.open_vscode.unwrap_or(false) {
         let ws_file = workspace_path.join(&workspace_file);
-        let _ = Command::new("code")
-            .arg(ws_file.to_string_lossy().to_string())
-            .spawn();
+        let _ = shell_spawn("code", &[&ws_file.to_string_lossy()]);
     }
 
     // Save to recent workspaces
     let _ = crate::workspace::save_recent_workspace(request.path.clone());
 
+    let skipped_count = files_skipped.len();
     emit_progress(&app, "Complete", total_steps, total_steps, &format!(
-        "Workspace ready! {} skills from {} packages installed to .claude/skills/",
+        "Done! {} skills from {} packages. {} files skipped.",
         skills_total,
-        packages_installed.len()
+        packages_installed.len(),
+        skipped_count,
     ));
 
     Ok(InstallResult {
         workspace_file,
         files_created,
+        files_skipped,
         packages_installed,
         skills_total,
     })
@@ -337,7 +701,32 @@ fn generate_claude_md(
     name: &str,
     packages: &[String],
     effort: &str,
-) -> Result<String, String> {
+    strategy: &str,
+) -> Result<Option<String>, String> {
+    let file_path = workspace_path.join("CLAUDE.md");
+
+    // For "merge" strategy: append skill package references to existing CLAUDE.md
+    if file_path.exists() && strategy == "merge" {
+        let existing = fs::read_to_string(&file_path).unwrap_or_default();
+        if !packages.is_empty() {
+            let mut append = String::from("\n\n## Installed Skill Packages (OpenAEC)\n\n");
+            append.push_str("Skills installed by OpenAEC Workspace Composer in `.claude/skills/`.\n\n");
+            for pkg in packages {
+                if !existing.contains(&format!(".claude/skills/{}--", pkg)) {
+                    append.push_str(&format!("- **{}** — `.claude/skills/{}--*/`\n", pkg, pkg));
+                }
+            }
+            let merged = format!("{}{}", existing.trim_end(), append);
+            fs::write(&file_path, merged)
+                .map_err(|e| format!("Failed to write CLAUDE.md: {}", e))?;
+        }
+        return Ok(Some("CLAUDE.md (merged)".to_string()));
+    }
+
+    if file_path.exists() && strategy == "skip" {
+        return Ok(None);
+    }
+
     let ws_name = if name.is_empty() { "Workspace" } else { name };
     let mut content = format!("# {}\n\n", ws_name);
     content.push_str("## Identity\n");
@@ -347,7 +736,7 @@ fn generate_claude_md(
         content.push_str("## Installed Skill Packages\n\n");
         content.push_str("Skills are installed in `.claude/skills/` and auto-discovered by Claude Code.\n\n");
         for pkg in packages {
-            content.push_str(&format!("- **{}** — `.claude/skills/{}/`\n", pkg, pkg));
+            content.push_str(&format!("- **{}** — `.claude/skills/{}--*/`\n", pkg, pkg));
         }
         content.push('\n');
     }
@@ -364,17 +753,23 @@ fn generate_claude_md(
         content.push_str("- P-003: Use dedicated tools over Bash equivalents\n");
     }
 
-    let file_path = workspace_path.join("CLAUDE.md");
     fs::write(&file_path, &content).map_err(|e| format!("Failed to write CLAUDE.md: {}", e))?;
-    Ok("CLAUDE.md".to_string())
+    Ok(Some("CLAUDE.md".to_string()))
 }
 
 fn generate_settings_json(
     workspace_path: &Path,
     permissions: &[String],
-) -> Result<String, String> {
+    strategy: &str,
+) -> Result<Option<String>, String> {
     let claude_dir = workspace_path.join(".claude");
     fs::create_dir_all(&claude_dir).map_err(|e| format!("Failed to create .claude: {}", e))?;
+
+    let file_path = claude_dir.join("settings.local.json");
+
+    if file_path.exists() && (strategy == "skip" || strategy == "merge") {
+        return Ok(None);
+    }
 
     let perms: Vec<String> = if permissions.is_empty() {
         vec![
@@ -401,29 +796,35 @@ fn generate_settings_json(
         }
     });
 
-    let file_path = claude_dir.join("settings.local.json");
     let json = serde_json::to_string_pretty(&settings).map_err(|e| format!("JSON error: {}", e))?;
     fs::write(&file_path, json).map_err(|e| format!("Failed to write settings: {}", e))?;
-    Ok(".claude/settings.local.json".to_string())
+    Ok(Some(".claude/settings.local.json".to_string()))
 }
 
 fn generate_workspace_file(
     workspace_path: &Path,
     name: &str,
     packages: &[String],
-) -> Result<String, String> {
+    strategy: &str,
+) -> Result<Option<String>, String> {
     let ws_name = if name.is_empty() {
         workspace_path.file_name().unwrap_or_default().to_string_lossy().to_string()
     } else {
         name.to_string()
     };
 
+    let file_name = format!("{}.code-workspace", ws_name.to_lowercase().replace(' ', "-"));
+    let file_path = workspace_path.join(&file_name);
+
+    if file_path.exists() && strategy == "skip" {
+        return Ok(None);
+    }
+
     let mut folders = vec![serde_json::json!({
         "name": ws_name,
         "path": "."
     })];
 
-    // Add .claude/skills as a browsable folder
     if !packages.is_empty() {
         folders.push(serde_json::json!({
             "name": "Skills (auto-discovered)",
@@ -441,11 +842,9 @@ fn generate_workspace_file(
         }
     });
 
-    let file_name = format!("{}.code-workspace", ws_name.to_lowercase().replace(' ', "-"));
-    let file_path = workspace_path.join(&file_name);
     let json = serde_json::to_string_pretty(&workspace).map_err(|e| format!("JSON error: {}", e))?;
     fs::write(&file_path, json).map_err(|e| format!("Failed to write workspace file: {}", e))?;
-    Ok(file_name)
+    Ok(Some(file_name))
 }
 
 fn generate_gitignore(workspace_path: &Path) -> Result<Option<String>, String> {
@@ -468,11 +867,20 @@ PROMPTS.md
     Ok(Some(".gitignore".to_string()))
 }
 
+/// Spawn a command, using cmd /C on Windows to handle .cmd scripts (code, npm, claude, etc.)
+fn shell_spawn(cmd: &str, args: &[&str]) -> Result<std::process::Child, std::io::Error> {
+    if cfg!(target_os = "windows") {
+        let mut full_args = vec!["/C", cmd];
+        full_args.extend_from_slice(args);
+        Command::new("cmd").args(&full_args).spawn()
+    } else {
+        Command::new(cmd).args(args).spawn()
+    }
+}
+
 #[tauri::command]
 pub async fn open_in_vscode(path: String) -> Result<(), String> {
-    Command::new("code")
-        .arg(&path)
-        .spawn()
+    shell_spawn("code", &[&path])
         .map_err(|e| format!("Failed to open VS Code: {}", e))?;
     Ok(())
 }

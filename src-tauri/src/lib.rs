@@ -1,8 +1,11 @@
+mod config_writer;
 mod generators;
+mod git;
 mod gpu_server;
 mod installer;
 mod prerequisites;
 mod registry;
+mod skill_scanner;
 mod workspace;
 
 use generators::common::{GenerateRequest, GenerateResult};
@@ -42,8 +45,30 @@ pub fn run() {
             workspace::save_recent_workspace,
             registry::fetch_registry,
             registry::get_cached_registry,
+            installer::list_package_skills,
+            installer::scan_conflicts,
             installer::install_workspace,
             installer::open_in_vscode,
+            config_writer::write_settings_json,
+            config_writer::write_mcp_json,
+            config_writer::write_claude_md,
+            config_writer::read_settings_json,
+            config_writer::read_mcp_json,
+            config_writer::read_claude_md,
+            config_writer::write_workspace_file,
+            config_writer::read_workspace_file,
+            config_writer::get_home_dir,
+            git::git_init,
+            git::git_status,
+            git::git_stage_all,
+            git::git_commit,
+            git::git_push,
+            git::git_log,
+            git::git_branch,
+            git::git_branches,
+            git::git_create_gitignore,
+            git::write_file,
+            skill_scanner::scan_skill_package,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

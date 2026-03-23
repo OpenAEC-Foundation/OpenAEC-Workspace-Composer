@@ -47,6 +47,11 @@ const [installResult, setInstallResult] = createSignal<{
 const [conflicts, setConflicts] = createSignal<Conflict[]>([]);
 const [conflictStrategy, setConflictStrategy] = createSignal<ConflictStrategy>("merge");
 
+// Install options (toggles)
+const [openVscodeAfterInstall, setOpenVscodeAfterInstall] = createSignal(true);
+const [gpuSyncAfterInstall, setGpuSyncAfterInstall] = createSignal(false);
+const [initGitAfterInstall, setInitGitAfterInstall] = createSignal(true);
+
 // Prerequisites
 const [prerequisites, setPrerequisites] = createSignal<PrerequisiteCheck[]>([]);
 const [prerequisitesChecked, setPrerequisitesChecked] = createSignal(false);
@@ -97,4 +102,11 @@ export const installStore = {
   isInstalling,
   resetInstall,
   updateStep,
+  // Install options
+  openVscodeAfterInstall,
+  setOpenVscodeAfterInstall,
+  gpuSyncAfterInstall,
+  setGpuSyncAfterInstall,
+  initGitAfterInstall,
+  setInitGitAfterInstall,
 };

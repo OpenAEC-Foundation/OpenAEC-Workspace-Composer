@@ -3,6 +3,7 @@ import { workspaceStore } from "../stores/workspace.store";
 import type { PathValidation } from "../stores/workspace.store";
 import { packagesStore } from "../stores/packages.store";
 import { installStore } from "../stores/install.store";
+import { gpuStore } from "../stores/gpu.store";
 import type { ConflictStrategy } from "../stores/install.store";
 
 export function InstallPage() {
@@ -65,7 +66,8 @@ export function InstallPage() {
   );
 
   function canInstall(): boolean {
-    if (!pathIsValid()) return false;
+    // Need a workspace path (parent dir selected)
+    if (!workspaceStore.workspacePath()) return false;
     if (packagesStore.selectedPackages().length === 0) return false;
     if (installStore.prerequisitesChecked() && !installStore.allPrerequisitesMet()) return false;
     return true;
@@ -164,22 +166,42 @@ export function InstallPage() {
     await doInstall();
   }
 
+  function getInstallPath(): string {
+    const base = workspaceStore.workspacePath().replace(/[\\/]$/, "");
+    const name = workspaceStore.projectName?.() ?? "";
+    if (name.trim()) {
+      return base + "/" + name.trim();
+    }
+    return base;
+  }
+
   async function doInstall() {
     installStore.setInstallStatus("installing");
     try {
       const { invoke } = await import("@tauri-apps/api/core");
+      const installPath = getInstallPath();
+      // Build GPU sync config if enabled and connected
+      const gpuSync = installStore.gpuSyncAfterInstall() && gpuStore.connected()
+        ? {
+            enabled: true,
+            sshTarget: gpuStore.config().sshConfigHost || `${gpuStore.config().username}@${gpuStore.config().host}`,
+            remoteBasePath: `/home/${gpuStore.config().username}/workspaces`,
+          }
+        : undefined;
+
       const result = await invoke("install_workspace", {
         request: {
           workflowType: "skill-package",
-          path: workspaceStore.workspacePath(),
+          path: installPath,
           name: workspaceStore.projectName?.() ?? "",
           effort: workspaceStore.effortLevel?.() ?? "medium",
           packages: packagesStore.selectedPackages(),
-          initGit: true,
-          openVscode: false,
+          initGit: installStore.initGitAfterInstall(),
+          openVscode: installStore.openVscodeAfterInstall(),
           coreFiles: [],
           permissions: [],
           conflictStrategy: installStore.conflictStrategy(),
+          gpuSync,
         },
       });
       installStore.setInstallResult(result as any);
@@ -262,44 +284,79 @@ export function InstallPage() {
         {/* Workspace location */}
         <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
           <h2 class="card-title">Install Location</h2>
-          <p class="text-dim" style={{ "font-size": "0.8rem", "margin-bottom": "var(--sp-3)" }}>
-            Kies de map waar je workspace aangemaakt wordt. Skills worden geinstalleerd in .claude/skills/.
-          </p>
 
-          <button
-            class="btn btn-primary"
-            style={{ width: "100%", "margin-bottom": "var(--sp-2)", padding: "var(--sp-3)" }}
-            onClick={handleBrowse}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ "margin-right": "var(--sp-2)", "vertical-align": "middle" }}>
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
-            Kies map
-          </button>
+          {/* Step 1: Choose parent directory */}
+          <div class="form-group">
+            <label>Bovenliggende map</label>
+            <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+              <button
+                class="btn btn-primary"
+                style={{ padding: "var(--sp-2) var(--sp-3)" }}
+                onClick={handleBrowse}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ "margin-right": "var(--sp-1)", "vertical-align": "middle" }}>
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                Kies map
+              </button>
+              <Show when={workspaceStore.workspacePath()}>
+                <div style={{
+                  display: "flex",
+                  "align-items": "center",
+                  gap: "var(--sp-2)",
+                  padding: "var(--sp-1) var(--sp-3)",
+                  background: "var(--bg-input)",
+                  "border-radius": "var(--radius)",
+                  "border": "1px solid var(--border)",
+                  flex: 1,
+                  "min-width": 0,
+                }}>
+                  <code class="font-mono" style={{ "font-size": "0.75rem", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
+                    {workspaceStore.workspacePath()}
+                  </code>
+                </div>
+              </Show>
+            </div>
+          </div>
 
+          {/* Step 2: Project name (creates subfolder) */}
           <Show when={workspaceStore.workspacePath()}>
+            <div class="form-group" style={{ "margin-top": "var(--sp-3)" }}>
+              <label>Projectnaam (wordt een nieuwe map)</label>
+              <input
+                type="text"
+                placeholder="mijn-project"
+                value={workspaceStore.projectName?.() ?? ""}
+                onInput={(e) => {
+                  const name = e.currentTarget.value;
+                  workspaceStore.setProjectName(name);
+                  if (name.trim()) {
+                    const base = workspaceStore.workspacePath().replace(/[\\/]$/, "");
+                    const fullPath = base + "/" + name.trim();
+                    debouncedValidate(fullPath);
+                  }
+                }}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            {/* Show final path */}
             <div style={{
-              display: "flex",
-              "align-items": "center",
-              gap: "var(--sp-2)",
+              "margin-top": "var(--sp-2)",
               padding: "var(--sp-2) var(--sp-3)",
               background: "var(--bg-input)",
               "border-radius": "var(--radius)",
               "border": "1px solid var(--border)",
+              display: "flex",
+              "align-items": "center",
+              gap: "var(--sp-2)",
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
-              <code class="font-mono" style={{ "font-size": "0.8rem", flex: 1, "word-break": "break-all" }}>
-                {workspaceStore.workspacePath()}
+              <code class="font-mono" style={{ "font-size": "0.75rem", flex: 1, "word-break": "break-all" }}>
+                {workspaceStore.workspacePath().replace(/[\\/]$/, "")}{workspaceStore.projectName?.() ? "/" + workspaceStore.projectName() : ""}
               </code>
-              <button
-                class="btn btn-ghost"
-                style={{ padding: "2px 6px", "font-size": "0.7rem" }}
-                onClick={() => { workspaceStore.setWorkspacePath(""); workspaceStore.setPathValidation(null); }}
-              >
-                Wijzig
-              </button>
             </div>
           </Show>
 
@@ -569,6 +626,58 @@ export function InstallPage() {
                 </For>
               </div>
             </Show>
+          </div>
+        </Show>
+
+        {/* Install options */}
+        <Show when={installStore.installStatus() === "idle" || installStore.installStatus() === "conflicts"}>
+          <div class="card" style={{ "margin-top": "var(--sp-4)" }}>
+            <h2 class="card-title">Install Options</h2>
+            <div class="install-options">
+              <label class="install-option">
+                <input
+                  type="checkbox"
+                  checked={installStore.openVscodeAfterInstall()}
+                  onChange={() => installStore.setOpenVscodeAfterInstall(!installStore.openVscodeAfterInstall())}
+                />
+                <div>
+                  <strong>Open VS Code workspace after install</strong>
+                  <small class="text-dim">Launches VS Code with the generated .code-workspace file</small>
+                </div>
+              </label>
+              <label class="install-option">
+                <input
+                  type="checkbox"
+                  checked={installStore.initGitAfterInstall()}
+                  onChange={() => installStore.setInitGitAfterInstall(!installStore.initGitAfterInstall())}
+                />
+                <div>
+                  <strong>Initialize git repository</strong>
+                  <small class="text-dim">Run git init in the workspace directory</small>
+                </div>
+              </label>
+              <label class={`install-option ${!gpuStore.connected() ? "disabled" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={installStore.gpuSyncAfterInstall()}
+                  onChange={() => installStore.setGpuSyncAfterInstall(!installStore.gpuSyncAfterInstall())}
+                  disabled={!gpuStore.connected()}
+                />
+                <div>
+                  <strong>Sync to GPU server</strong>
+                  <Show
+                    when={gpuStore.connected()}
+                    fallback={
+                      <small class="text-muted">Connect to a GPU server first (Remote &gt; GPU Server)</small>
+                    }
+                  >
+                    <small class="text-dim">
+                      Bidirectional Mutagen sync to {gpuStore.config().host || gpuStore.config().sshConfigHost}:/home/{gpuStore.config().username}/workspaces/
+                    </small>
+                  </Show>
+                </div>
+              </label>
+            </div>
           </div>
         </Show>
 

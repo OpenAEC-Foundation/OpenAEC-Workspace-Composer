@@ -228,6 +228,62 @@
 }
 
 /* ============================================================
+   Install Options (toggles before install)
+   ============================================================ */
+.install-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.install-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.install-option:hover {
+  border-color: var(--accent);
+}
+
+.install-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.install-option.disabled:hover {
+  border-color: var(--border);
+}
+
+.install-option input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.install-option div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-option strong {
+  font-size: 0.8125rem;
+}
+
+.install-option small {
+  font-size: 0.75rem;
+}
+
+/* ============================================================
    Install Progress
    ============================================================ */
 .install-progress {

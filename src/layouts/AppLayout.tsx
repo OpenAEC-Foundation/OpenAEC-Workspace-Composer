@@ -1,13 +1,14 @@
-import { createMemo, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import type { ParentProps } from "solid-js";
 import { Titlebar } from "../components/Titlebar";
 import { StatusBar } from "../components/StatusBar";
+import { FeedbackDialog } from "../components/FeedbackDialog";
 import { packagesStore } from "../stores/packages.store";
 import { gpuStore } from "../stores/gpu.store";
 import { appStore } from "../stores/app.store";
 import { PageTransition } from "../components/PageTransition";
-import { TbOutlineHome, TbOutlineBolt, TbOutlinePackage, TbOutlineFolder, TbOutlineSettings, TbOutlineLink, TbOutlineShield, TbOutlineCpu, TbOutlineFileText, TbOutlineCloudDownload, TbOutlineServer, TbOutlineRefresh, TbOutlineInfoCircle, TbOutlineSun, TbOutlineMoon } from "solid-icons/tb";
+import { TbOutlineHome, TbOutlineBolt, TbOutlinePackage, TbOutlineFolder, TbOutlineSettings, TbOutlineLink, TbOutlineShield, TbOutlineCpu, TbOutlineFileText, TbOutlineCloudDownload, TbOutlineServer, TbOutlineRefresh, TbOutlineInfoCircle, TbOutlineSun, TbOutlineMoon, TbOutlineMessage } from "solid-icons/tb";
 import openaecSymbol from "../assets/openaec-symbol.svg";
 
 function NavIcon(props: { icon: string }) {
@@ -35,6 +36,7 @@ export function AppLayout(props: ParentProps) {
   const gpuConnected = createMemo(() => gpuStore.connected());
   const gpuSyncCount = createMemo(() => gpuStore.activeSyncCount());
   const advanced = createMemo(() => appStore.isAdvanced());
+  const [feedbackOpen, setFeedbackOpen] = createSignal(false);
 
   return (
     <div class="app">
@@ -185,6 +187,13 @@ export function AppLayout(props: ParentProps) {
                 <span>About</span>
               </A>
             </div>
+
+            <div class="sidebar-nav-group">
+              <button class="sidebar-feedback-btn" onClick={() => setFeedbackOpen(true)}>
+                <TbOutlineMessage size={16} />
+                <span>Send Feedback</span>
+              </button>
+            </div>
           </div>
           <div class="sidebar-footer">
             <button
@@ -206,6 +215,7 @@ export function AppLayout(props: ParentProps) {
         </div>
       </div>
       <StatusBar />
+      <FeedbackDialog open={feedbackOpen()} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

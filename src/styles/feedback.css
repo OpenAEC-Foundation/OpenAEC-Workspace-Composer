@@ -1,0 +1,166 @@
+/* ============================================================
+   Feedback Dialog
+   ============================================================ */
+
+.feedback-dialog {
+  max-width: 480px;
+  min-width: 380px;
+}
+
+.feedback-dialog .modal-body {
+  margin-bottom: 0;
+}
+
+.feedback-dialog textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Required asterisk */
+.feedback-required {
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* Category toggle buttons */
+.feedback-categories {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.feedback-category-btn {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.feedback-category-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.feedback-category-btn.active {
+  background: var(--bg-active);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Character count */
+.feedback-char-count {
+  text-align: right;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+.feedback-char-count.warning {
+  color: var(--signal-orange);
+}
+
+/* Sentiment buttons */
+.feedback-sentiment {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.feedback-sentiment-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+  opacity: 0.6;
+}
+
+.feedback-sentiment-btn:hover {
+  opacity: 1;
+  border-color: var(--border-strong);
+  transform: scale(1.1);
+}
+
+.feedback-sentiment-btn.active {
+  opacity: 1;
+  border-color: var(--accent);
+  background: var(--bg-active);
+  transform: scale(1.15);
+}
+
+/* Error message */
+.feedback-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--error);
+  font-size: 0.8rem;
+  margin-bottom: var(--sp-3);
+}
+
+/* Success state */
+.feedback-success {
+  text-align: center;
+  padding: var(--sp-4) 0;
+}
+
+.feedback-success-icon {
+  font-size: 2rem;
+  margin-bottom: var(--sp-3);
+}
+
+.feedback-success h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  margin-bottom: var(--sp-2);
+}
+
+.feedback-success p {
+  font-size: 0.85rem;
+  max-width: 360px;
+  margin: 0 auto var(--sp-4);
+}
+
+.feedback-success .modal-footer {
+  justify-content: center;
+}
+
+/* Sidebar feedback button */
+.sidebar-feedback-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.sidebar-feedback-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.sidebar-feedback-btn svg {
+  flex-shrink: 0;
+}

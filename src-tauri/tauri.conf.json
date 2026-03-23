@@ -10,9 +10,12 @@
     "beforeBuildCommand": "npm run build"
   },
   "bundle": {
+    "active": true,
     "icon": [
+      "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": false
   },
   "app": {
     "windows": [

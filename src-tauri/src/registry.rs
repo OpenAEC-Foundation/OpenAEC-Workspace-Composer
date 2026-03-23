@@ -416,3 +416,128 @@ pub async fn fetch_registry(force_refresh: bool) -> Result<Vec<RegistryPackage>,
 pub fn get_cached_registry() -> Result<Vec<RegistryPackage>, String> {
     get_cached(u64::MAX).ok_or_else(|| "No cached registry data".to_string())
 }
+
+/// Add a custom GitHub repo as a skill package. Uses gh CLI for auth (no rate limits).
+#[tauri::command]
+pub async fn add_custom_repo(repo_path: String) -> Result<RegistryPackage, String> {
+    // Clean up the input
+    let repo = repo_path
+        .trim()
+        .trim_end_matches('/')
+        .trim_end_matches(".git")
+        .replace("https://github.com/", "")
+        .replace("http://github.com/", "");
+
+    if !repo.contains('/') {
+        return Err("Use format: owner/repo".to_string());
+    }
+
+    // Try gh CLI first (authenticated, no rate limit)
+    let repo_info = std::process::Command::new("gh")
+        .args(["api", &format!("repos/{}", repo)])
+        .output();
+
+    let (name, description, html_url, updated_at, topics) = match repo_info {
+        Ok(output) if output.status.success() => {
+            let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+                .map_err(|e| format!("Failed to parse gh output: {}", e))?;
+            (
+                json["name"].as_str().unwrap_or("").to_string(),
+                json["description"].as_str().unwrap_or("").to_string(),
+                json["html_url"].as_str().unwrap_or("").to_string(),
+                json["updated_at"].as_str().unwrap_or("").to_string(),
+                json["topics"].as_array()
+                    .map(|t| t.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<Vec<_>>())
+                    .unwrap_or_default(),
+            )
+        }
+        _ => {
+            // Fallback: try unauthenticated API
+            let client = reqwest::Client::new();
+            let resp = client
+                .get(&format!("https://api.github.com/repos/{}", repo))
+                .header("User-Agent", "OpenAEC-Workspace-Composer")
+                .send()
+                .await
+                .map_err(|e| format!("GitHub API failed: {}", e))?;
+
+            if !resp.status().is_success() {
+                return Err(format!("Repo not found or rate limited ({}). Install gh CLI for unlimited access: winget install GitHub.cli", resp.status()));
+            }
+
+            let json: serde_json::Value = resp.json().await
+                .map_err(|e| format!("Parse error: {}", e))?;
+            (
+                json["name"].as_str().unwrap_or("").to_string(),
+                json["description"].as_str().unwrap_or("").to_string(),
+                json["html_url"].as_str().unwrap_or("").to_string(),
+                json["updated_at"].as_str().unwrap_or("").to_string(),
+                json["topics"].as_array()
+                    .map(|t| t.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<Vec<_>>())
+                    .unwrap_or_default(),
+            )
+        }
+    };
+
+    // Count skills via gh CLI tree
+    let mut skill_count = 0u32;
+    let mut skill_names = Vec::new();
+
+    let tree_output = std::process::Command::new("gh")
+        .args(["api", &format!("repos/{}/git/trees/main?recursive=1", repo)])
+        .output();
+
+    if let Ok(output) = tree_output {
+        if output.status.success() {
+            if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&output.stdout) {
+                if let Some(tree) = json["tree"].as_array() {
+                    for entry in tree {
+                        let path = entry["path"].as_str().unwrap_or("");
+                        if path.ends_with("SKILL.md") && path != "SKILL.md" {
+                            skill_count += 1;
+                            let parts: Vec<&str> = path.split('/').collect();
+                            if parts.len() >= 2 {
+                                skill_names.push(parts[parts.len() - 2].to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback count from description
+    if skill_count == 0 {
+        if let Some(cap) = description.split_whitespace().next() {
+            if let Ok(n) = cap.parse::<u32>() {
+                skill_count = n;
+            }
+        }
+    }
+
+    let id = repo.replace('/', "--").to_lowercase();
+    let display_name = name
+        .replace("-Claude-Skill-Package", "")
+        .replace("_Claude_Skill_Package", "")
+        .replace('-', " ")
+        .replace('_', " ");
+
+    let org = repo.split('/').next().unwrap_or("");
+    let logo_url = format!("https://github.com/{}.png?size=128", org);
+
+    Ok(RegistryPackage {
+        id,
+        name: display_name,
+        description,
+        category: "cross-tech".to_string(),
+        skill_count,
+        repo: repo.to_string(),
+        repo_url: html_url,
+        status: if skill_count > 0 { "published".to_string() } else { "development".to_string() },
+        tags: if topics.is_empty() { vec![name] } else { topics },
+        publisher: org.to_string(),
+        updated_at: updated_at,
+        skills_path: String::new(),
+        skill_names,
+    })
+}

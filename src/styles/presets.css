@@ -1,89 +1,211 @@
 /* ============================================================
-   13. Preset Cards (horizontal scrollable row)
+   Preset Tiles
    ============================================================ */
+
+/* Section labels */
+.preset-section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(217, 119, 6, 0.06);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
+}
+
+.preset-section-icon {
+  font-size: 1rem;
+}
+
+/* Grid: max 3 columns */
 .preset-grid {
-  display: flex;
-  gap: var(--sp-3);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: var(--sp-2);
-  margin-bottom: var(--sp-4);
-  scroll-snap-type: x mandatory;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
 }
 
-/* hide horizontal scrollbar but keep scrollable */
-.preset-grid::-webkit-scrollbar {
-  height: 4px;
+@media (max-width: 1000px) {
+  .preset-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.preset-card {
+@media (max-width: 650px) {
+  .preset-grid { grid-template-columns: 1fr; }
+}
+
+/* Individual preset tile */
+.preset-tile {
+  position: relative;
   display: flex;
-  align-items: stretch;
-  gap: var(--sp-3);
-  min-width: 200px;
-  max-width: 260px;
-  padding: var(--sp-3) var(--sp-4);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  text-align: left;
-  color: var(--text-primary);
-  transition: all var(--transition);
-  scroll-snap-align: start;
-  flex-shrink: 0;
-  position: relative;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
 
-/* Colored accent strip on left */
-.preset-card::before {
-  content: "";
+.preset-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--preset-color, var(--accent));
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    0 0 0 1px var(--preset-color, var(--accent));
+}
+
+.preset-tile.active {
+  border-color: var(--preset-color, var(--accent));
+  background: rgba(217, 119, 6, 0.06);
+}
+
+/* Color bar at top */
+.preset-tile-bar {
   position: absolute;
-  left: 0;
   top: 0;
-  bottom: 0;
-  width: 4px;
+  left: 0;
+  right: 0;
+  height: 3px;
   background: var(--preset-color, var(--accent));
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
 }
 
-.preset-card:hover {
-  border-color: var(--preset-color, var(--accent));
-  box-shadow: 0 0 16px rgba(217, 119, 6, 0.08);
-  transform: translateY(-1px);
+.preset-tile.active .preset-tile-bar {
+  height: 4px;
+  box-shadow: 0 0 12px var(--preset-color, var(--accent));
 }
 
-.preset-card.selected {
-  border-color: var(--preset-color, var(--accent));
-  box-shadow: 0 0 0 1px var(--preset-color, var(--accent)),
-              0 0 20px rgba(217, 119, 6, 0.12);
-}
-
-.preset-info {
+/* Active checkmark */
+.preset-tile-check {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--success);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: var(--sp-2);
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
-.preset-info strong {
+/* Logo row: big circles */
+.preset-logos {
+  display: flex;
+  gap: 10px;
+  margin-bottom: var(--sp-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.preset-logo-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preset-logo-circle img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.preset-tile:hover .preset-logo-circle {
+  transform: scale(1.1);
+}
+
+/* Name */
+.preset-tile-name {
   font-family: var(--font-heading);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--sp-1) 0;
 }
 
-.preset-info small {
+/* Description */
+.preset-tile-desc {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 var(--sp-3) 0;
+  flex: 1;
+}
+
+/* Stats row */
+.preset-tile-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   color: var(--text-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
 }
 
-.preset-indicator {
-  width: 4px;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--preset-color, var(--accent));
-  flex-shrink: 0;
-  display: none; /* using ::before pseudo instead */
+.preset-tile-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+/* Version upgrade badges */
+.preset-version-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.preset-version {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.preset-version.from {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
+}
+
+.preset-version.to {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+}
+
+.preset-version-arrow {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Sticky selection bar */
+.preset-selection-bar {
+  position: sticky;
+  bottom: var(--sp-2);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }

@@ -20,7 +20,9 @@ const storedTheme = (typeof localStorage !== "undefined"
 const [theme, setTheme] = createSignal<Theme>(storedTheme ?? "dark");
 
 // Apply theme attribute on initial load
-document.documentElement.setAttribute("data-theme", theme());
+if (typeof document !== "undefined") {
+  document.documentElement.setAttribute("data-theme", theme());
+}
 
 function toggleTheme() {
   const next: Theme = theme() === "dark" ? "light" : "dark";

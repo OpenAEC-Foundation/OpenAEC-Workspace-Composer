@@ -166,5 +166,6 @@ export const packagesStore = {
   clearSelection,
   setSearchQuery,
   setSelectedPackages,
+  setRegistryPackages,
   setSelectedPreset,
 };

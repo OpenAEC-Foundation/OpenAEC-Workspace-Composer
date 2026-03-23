@@ -14,25 +14,28 @@
 .category-label {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  margin-bottom: var(--sp-2);
-  padding-bottom: var(--sp-1);
-  border-bottom: 1px solid var(--border);
+  gap: var(--sp-2);
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(217, 119, 6, 0.06);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
 }
 
 .category-count {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  background: var(--bg-card);
-  padding: 1px 8px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(217, 119, 6, 0.12);
+  padding: 2px 8px;
   border-radius: var(--radius-full);
+  margin-left: auto;
 }
 
 /* ============================================================
@@ -223,8 +226,14 @@
 
 /* Category icon in heading */
 .category-icon {
-  margin-right: var(--sp-1);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(217, 119, 6, 0.1);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 /* Expanded package tile */
@@ -259,34 +268,43 @@
   margin-top: var(--sp-2);
   padding-top: var(--sp-2);
   border-top: 1px solid var(--border);
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
 }
 
 .skill-category-label {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--accent);
   padding: var(--sp-1) 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  grid-column: 1 / -1;
 }
 
 .skill-item {
   display: flex;
-  align-items: flex-start;
-  gap: var(--sp-2);
-  padding: 3px 0;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 4px 6px;
   cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.skill-item.excluded {
-  opacity: 0.4;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
 }
 
 .skill-item:hover {
-  opacity: 1;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.skill-item.excluded {
+  opacity: 0.35;
+}
+
+.skill-item.excluded:hover {
+  opacity: 0.7;
 }
 
 /* ============================================================

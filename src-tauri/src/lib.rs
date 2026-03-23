@@ -45,6 +45,7 @@ pub fn run() {
             workspace::save_recent_workspace,
             registry::fetch_registry,
             registry::get_cached_registry,
+            registry::add_custom_repo,
             installer::list_package_skills,
             installer::scan_conflicts,
             installer::install_workspace,

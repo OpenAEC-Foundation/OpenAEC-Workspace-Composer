@@ -4,3 +4,4 @@ src-tauri/target/
 .env
 *.local
 PROMPTS.md
+.claude/skills/

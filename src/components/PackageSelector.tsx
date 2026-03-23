@@ -19,13 +19,66 @@ interface Props {
   activeFilters: FilterId[];
 }
 
-const categoryIcons: Record<SkillPackage["category"], string> = {
-  "aec-bim": "\u{1F3D7}",
-  "erp-business": "\u{1F4CA}",
-  "web-dev": "\u{1F310}",
-  "devops": "\u{2699}",
-  "cross-tech": "\u{1F517}",
-};
+function CategoryIcon(props: { category: string }) {
+  const icons: Record<string, () => any> = {
+    "aec-bim": () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        {/* Isometric building */}
+        <path d="M3 21V8l9-6 9 6v13" />
+        <path d="M9 21V12h6v9" />
+        <path d="M3 8l9 6 9-6" />
+        <rect x="6" y="10" width="3" height="3" rx="0.5" fill="var(--accent)" opacity="0.3" />
+        <rect x="15" y="10" width="3" height="3" rx="0.5" fill="var(--accent)" opacity="0.3" />
+      </svg>
+    ),
+    "erp-business": () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        {/* Dashboard/analytics */}
+        <rect x="2" y="3" width="20" height="18" rx="2" />
+        <path d="M2 9h20" />
+        <path d="M6 15l3-3 3 2 4-5 2 3" />
+        <circle cx="6" cy="6" r="1" fill="var(--accent)" />
+        <circle cx="9.5" cy="6" r="1" fill="var(--warm-gold)" />
+      </svg>
+    ),
+    "web-dev": () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        {/* Code browser */}
+        <rect x="2" y="3" width="20" height="18" rx="2" />
+        <path d="M2 9h20" />
+        <path d="M9 15l-3-3 3-3" />
+        <path d="M15 15l3-3-3-3" />
+        <circle cx="6" cy="6" r="1" fill="var(--accent)" />
+        <circle cx="9.5" cy="6" r="1" fill="var(--warm-gold)" />
+        <circle cx="13" cy="6" r="1" fill="var(--success)" />
+      </svg>
+    ),
+    "devops": () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        {/* Infinity loop / CI-CD */}
+        <path d="M8 12a4 4 0 1 1 0-0.01" />
+        <path d="M16 12a4 4 0 1 1 0-0.01" />
+        <path d="M12 12h0" />
+        <circle cx="4" cy="12" r="1.5" fill="var(--accent)" opacity="0.4" />
+        <circle cx="20" cy="12" r="1.5" fill="var(--accent)" opacity="0.4" />
+      </svg>
+    ),
+    "cross-tech": () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        {/* Connected nodes / integration */}
+        <circle cx="12" cy="5" r="2.5" fill="var(--accent)" opacity="0.2" />
+        <circle cx="5" cy="18" r="2.5" fill="var(--accent)" opacity="0.2" />
+        <circle cx="19" cy="18" r="2.5" fill="var(--accent)" opacity="0.2" />
+        <path d="M12 7.5v3.5" />
+        <path d="M12 11l-5.5 5" />
+        <path d="M12 11l5.5 5" />
+        <circle cx="12" cy="11" r="1.5" fill="var(--warm-gold)" />
+      </svg>
+    ),
+  };
+  const render = icons[props.category];
+  return render ? render() : null;
+}
 
 export function PackageSelector(props: Props) {
   // Track which package is expanded to show skills
@@ -153,7 +206,7 @@ export function PackageSelector(props: Props) {
               <div class="package-category">
                 <h3 class="category-label">
                   <span class="category-icon">
-                    {categoryIcons[category as SkillPackage["category"]] ?? ""}
+                    <CategoryIcon category={category} />
                   </span>
                   {categoryLabels[category as SkillPackage["category"]] ?? category}
                   <span class="category-count">{pkgs.length}</span>
@@ -190,6 +243,10 @@ export function PackageSelector(props: Props) {
                                 const logo = getPackageLogo(pkg.id);
                                 if (logo) {
                                   return <img src={logo} alt={pkg.name} class="tile-logo-img" />;
+                                }
+                                const logoUrl = (pkg as any).logoUrl;
+                                if (logoUrl) {
+                                  return <img src={logoUrl} alt={pkg.name} class="tile-logo-img" style={{ "border-radius": "50%" }} />;
                                 }
                                 return <span class="tile-logo-fallback">{pkg.name.charAt(0)}</span>;
                               })()}
@@ -282,7 +339,7 @@ export function PackageSelector(props: Props) {
                               <Show when={!skillsLoading() && skills().length > 0}>
                                 <For each={Object.entries(groupedSkills())}>
                                   {([cat, catSkills]) => (
-                                    <div>
+                                    <>
                                       <Show when={cat !== "uncategorized" && cat !== ""}>
                                         <div class="skill-category-label">{cat}</div>
                                       </Show>
@@ -297,23 +354,15 @@ export function PackageSelector(props: Props) {
                                               <input
                                                 type="checkbox"
                                                 checked={!excluded()}
-                                                style={{ "accent-color": "var(--accent)" }}
                                               />
-                                              <div style={{ flex: 1, "min-width": 0 }}>
-                                                <span class="font-mono" style={{ "font-size": "0.72rem" }}>
-                                                  {skill.name || skill.id}
-                                                </span>
-                                                <Show when={skill.description}>
-                                                  <span class="text-dim" style={{ "font-size": "0.65rem", display: "block", "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}>
-                                                    {skill.description}
-                                                  </span>
-                                                </Show>
-                                              </div>
+                                              <span class="skill-item-name">
+                                                {skill.name || skill.id}
+                                              </span>
                                             </label>
                                           );
                                         }}
                                       </For>
-                                    </div>
+                                    </>
                                   )}
                                 </For>
                               </Show>

@@ -1,37 +1,29 @@
 # HANDOFF: OpenAEC Workspace Composer
 
-> Status per 2026-03-23
+> Status per 2026-03-24
 
-## Release v3.0.5 is LIVE
+## Release v3.0.6 is LIVE (bouwt nu via CI)
 
-Installers beschikbaar op: https://github.com/OpenAEC-Foundation/OpenAEC-Workspace-Composer/releases/tag/v3.0.5
+Tag gepusht, GitHub Actions bouwt installers voor Windows, Mac, Linux.
 
-| Platform | Bestand | Grootte |
-|----------|---------|---------|
-| Windows .exe | OpenAEC.Workspace.Composer_1.0.0_x64-setup.exe | 3MB |
-| Windows .msi | OpenAEC.Workspace.Composer_1.0.0_x64_en-US.msi | 5MB |
-| macOS .dmg | OpenAEC.Workspace.Composer_1.0.0_universal.dmg | 10MB |
-| Linux .deb | OpenAEC.Workspace.Composer_1.0.0_amd64.deb | 5MB |
-| Linux .AppImage | OpenAEC.Workspace.Composer_1.0.0_amd64.AppImage | 80MB |
-| Linux .rpm | OpenAEC.Workspace.Composer-1.0.0-1.x86_64.rpm | 5MB |
+Releases: https://github.com/OpenAEC-Foundation/OpenAEC-Workspace-Composer/releases
+
+### Wat nieuw is in v3.0.6
+
+**MCP server auto-merge vanuit skill packages.** Skill packages die een `.mcp.json` bevatten (zoals blender-bonsai met Blender MCP) worden automatisch gedetecteerd en samengevoegd tijdens install. Meerdere packages met verschillende MCP servers worden gecombineerd in één `.mcp.json`. Werkt in simple mode zonder extra configuratie.
+
+Gewijzigd bestand: `src-tauri/src/installer.rs` (+109 regels)
+- `find_package_mcp_config()` — zoekt `.mcp.json` in de package repo root
+- `merge_mcp_configs()` — merget mcpServers objecten van meerdere packages
+- `install_workspace()` — verzamelt en schrijft merged MCP config
+- `scan_conflicts()` — detecteert bestaande `.mcp.json`
+- Respecteert conflict strategy (skip/merge/overwrite)
 
 ## Bekend probleem: App icoon in taakbalk
 
 **PRIORITEIT 1 voor volgende sessie.**
 
 Het OpenAEC huis logo (icon.png, 256x256 RGBA) staat correct in `src-tauri/icons/`. Maar de app toont het NIET correct in de Windows taakbalk. Het oude Tauri standaard icoon verschijnt steeds.
-
-Geprobeerd:
-- icon.ico geconverteerd via png-to-ico
-- icon.png als RGBA via puppeteer
-- Windows icon cache gewist (ie4uinit, IconCache.db verwijderd)
-- bundle.icon geconfigureerd in tauri.conf.json
-- Dev mode en production build
-
-**Mogelijke oorzaken:**
-- Het ICO bestand is 128x128 bron, geschaald naar 48x48/32x32. Mogelijk te laag.
-- Tauri 2 gebruikt het icoon uit de bundle config alleen bij production install, niet bij dev mode
-- Windows cacht iconen per executable path
 
 **Volgende stappen:**
 1. Download een hoge-resolutie versie van het OpenAEC logo (512x512+ PNG, RGBA)
@@ -45,6 +37,7 @@ Geprobeerd:
 - 20+ combineerbare presets
 - Install flow: kies map, projectnaam, install
 - Skills naar `.claude/skills/` (Claude Code auto-discovery)
+- **MCP servers automatisch uit skill packages** (nieuw in v3.0.6)
 - CLAUDE.md met project guidance en stack beschrijving
 - Prerequisites check (Node, Git, Claude CLI, VS Code, Rust, Docker, SSH, Mutagen)
 - Custom repos toevoegen via "+ Add repo" (gh CLI auth)
@@ -82,4 +75,4 @@ Uitgeschakeld (`createUpdaterArtifacts: false`). Voor auto-updates:
 De eerste Windows CI build kan een timeout krijgen (geen Rust cache). Rerun lost dit op (cache is er dan wel).
 
 ### Versienummer
-tauri.conf.json zegt `1.0.0`, tags zeggen `v3.0.5`. Moet gesynchroniseerd worden.
+tauri.conf.json zegt `1.0.0`, tags zeggen `v3.0.6`. Moet gesynchroniseerd worden.

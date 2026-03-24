@@ -587,6 +587,18 @@ pub async fn scan_conflicts(
         }
     }
 
+    // Check .mcp.json
+    let mcp_json = workspace_path.join(".mcp.json");
+    if mcp_json.exists() {
+        let size = fs::metadata(&mcp_json).map(|m| m.len()).ok();
+        conflicts.push(Conflict {
+            path: ".mcp.json".to_string(),
+            kind: "file".to_string(),
+            description: "MCP server configuration already exists".to_string(),
+            existing_size: size,
+        });
+    }
+
     // Check .gitignore
     let gitignore = workspace_path.join(".gitignore");
     if gitignore.exists() {
@@ -601,6 +613,46 @@ pub async fn scan_conflicts(
 
     let has_conflicts = !conflicts.is_empty();
     Ok(ConflictScanResult { conflicts, has_conflicts })
+}
+
+/// Find and read .mcp.json from a package's repo root.
+/// The skills_source is typically `<repo>/skills/source/` or `<repo>/skills/`,
+/// so we walk up to find the repo root containing .mcp.json.
+fn find_package_mcp_config(skills_source: &Path) -> Option<serde_json::Value> {
+    let mut dir = skills_source;
+    // Walk up max 3 levels to find .mcp.json
+    for _ in 0..3 {
+        let mcp_path = dir.join(".mcp.json");
+        if mcp_path.exists() {
+            let content = fs::read_to_string(&mcp_path).ok()?;
+            let parsed: serde_json::Value = serde_json::from_str(&content).ok()?;
+            return Some(parsed);
+        }
+        dir = dir.parent()?;
+    }
+    None
+}
+
+/// Merge MCP server configs from multiple packages into a single .mcp.json.
+/// Later packages overwrite earlier ones if they define the same server name.
+fn merge_mcp_configs(configs: &[serde_json::Value]) -> Option<serde_json::Value> {
+    let mut merged = serde_json::Map::new();
+
+    for config in configs {
+        if let Some(servers) = config.get("mcpServers").and_then(|s| s.as_object()) {
+            for (name, value) in servers {
+                merged.insert(name.clone(), value.clone());
+            }
+        }
+    }
+
+    if merged.is_empty() {
+        return None;
+    }
+
+    Some(serde_json::json!({
+        "mcpServers": serde_json::Value::Object(merged)
+    }))
 }
 
 /// Count files recursively in a directory
@@ -653,6 +705,7 @@ pub async fn install_workspace(
     let mut files_skipped = Vec::new();
     let mut packages_installed = Vec::new();
     let mut skills_total = 0u32;
+    let mut mcp_configs: Vec<serde_json::Value> = Vec::new();
 
     // Step 2: Install each skill package
     for (i, pkg_id) in packages.iter().enumerate() {
@@ -681,6 +734,18 @@ pub async fn install_workspace(
                     total_steps,
                     &format!("Installing {} ({}) → .claude/skills/{}--*/", pkg_id, method, pkg_id),
                 );
+
+                // Check for .mcp.json in the package repo
+                if let Some(mcp_config) = find_package_mcp_config(&source_dir) {
+                    let server_count = mcp_config.get("mcpServers")
+                        .and_then(|s| s.as_object())
+                        .map(|o| o.len())
+                        .unwrap_or(0);
+                    if server_count > 0 {
+                        eprintln!("[install] {} → found .mcp.json with {} server(s)", pkg_id, server_count);
+                        mcp_configs.push(mcp_config);
+                    }
+                }
 
                 let mut pkg_skipped = Vec::new();
                 match install_skills_to_workspace(pkg_id, &source_dir, &workspace_path, strategy, &mut pkg_skipped) {
@@ -737,6 +802,50 @@ pub async fn install_workspace(
         Ok(Some(f)) => files_created.push(f),
         Ok(None) => files_skipped.push(".claude/settings.local.json".to_string()),
         Err(_) => {}
+    }
+
+    // Step 4b: Write merged .mcp.json (if any packages have MCP configs)
+    if !mcp_configs.is_empty() {
+        emit_progress(&app, "Configuring MCP", claude_step + 1, total_steps, "Merging MCP server configs...");
+        if let Some(merged) = merge_mcp_configs(&mcp_configs) {
+            let mcp_path = workspace_path.join(".mcp.json");
+
+            // For merge/skip: read existing .mcp.json and merge into it
+            let final_config = if mcp_path.exists() && (strategy == "merge" || strategy == "skip") {
+                if strategy == "skip" {
+                    // Don't touch existing .mcp.json
+                    files_skipped.push(".mcp.json".to_string());
+                    None
+                } else {
+                    // Merge: combine existing + new
+                    let existing = fs::read_to_string(&mcp_path).ok()
+                        .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok());
+                    if let Some(existing_config) = existing {
+                        let combined = merge_mcp_configs(&[existing_config, merged]);
+                        combined
+                    } else {
+                        Some(merged)
+                    }
+                }
+            } else {
+                Some(merged)
+            };
+
+            if let Some(config) = final_config {
+                let json = serde_json::to_string_pretty(&config)
+                    .map_err(|e| format!("Failed to serialize MCP config: {}", e))?;
+                fs::write(&mcp_path, &json)
+                    .map_err(|e| format!("Failed to write .mcp.json: {}", e))?;
+
+                let server_count = config.get("mcpServers")
+                    .and_then(|s| s.as_object())
+                    .map(|o| o.len())
+                    .unwrap_or(0);
+                files_created.push(format!(".mcp.json ({} servers)", server_count));
+                emit_progress(&app, "Configuring MCP", claude_step + 1, total_steps,
+                    &format!("MCP configured: {} server(s)", server_count));
+            }
+        }
     }
 
     // Step 5: Generate .code-workspace file

@@ -21,6 +21,12 @@ import { AuthPage } from "./pages/AuthPage";
 import { GitPage } from "./pages/GitPage";
 import { PresetsPage } from "./pages/PresetsPage";
 import { TeamsPage } from "./pages/TeamsPage";
+import { ManageOverviewPage } from "./pages/ManageOverviewPage";
+import { ManageProjectsPage } from "./pages/ManageProjectsPage";
+
+import { ManageLessonsPage } from "./pages/ManageLessonsPage";
+import { ManageSessionsPage } from "./pages/ManageSessionsPage";
+import { ManageIntegrationsPage } from "./pages/ManageIntegrationsPage";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
@@ -48,6 +54,12 @@ render(
       <Route path="/git" component={GitPage} />
       <Route path="/presets" component={PresetsPage} />
       <Route path="/teams" component={TeamsPage} />
+      <Route path="/manage" component={ManageOverviewPage} />
+      <Route path="/manage/projects" component={ManageProjectsPage} />
+
+      <Route path="/manage/lessons" component={ManageLessonsPage} />
+      <Route path="/manage/sessions" component={ManageSessionsPage} />
+      <Route path="/manage/integrations" component={ManageIntegrationsPage} />
     </Router>
   ),
   root

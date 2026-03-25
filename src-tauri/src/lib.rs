@@ -3,6 +3,7 @@ mod generators;
 mod git;
 mod gpu_server;
 mod installer;
+mod manager;
 mod prerequisites;
 mod registry;
 mod skill_scanner;
@@ -70,6 +71,14 @@ pub fn run() {
             git::git_create_gitignore,
             git::write_file,
             skill_scanner::scan_skill_package,
+            manager::scan_workspace,
+            manager::read_project_claude_md,
+            manager::read_project_file,
+            manager::read_session_summary,
+            manager::read_lessons_learned,
+            manager::read_context_file,
+            manager::open_in_terminal,
+            manager::open_in_explorer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -35,6 +35,7 @@
 
 /* 4. Feature sections */
 @import './gpu.css';
+@import './manager.css';
 @import './teams.css';
 @import './prereqs.css';
 @import './conflicts.css';

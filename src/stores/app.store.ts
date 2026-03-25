@@ -1,16 +1,22 @@
 import { createSignal, createMemo } from "solid-js";
 
-export type AppMode = "simple" | "advanced";
+export type AppMode = "simple" | "advanced" | "manage";
 export type Theme = "dark" | "light";
 
 const [mode, setMode] = createSignal<AppMode>("simple");
 
-// Simple mode: preset → path → install (3 steps)
+// Simple mode: preset -> path -> install (3 steps)
 // Advanced mode: full navigation with all pages
+// Manage mode: workspace manager for inspecting orchestrator state
 const isAdvanced = createMemo(() => mode() === "advanced");
+const isManage = createMemo(() => mode() === "manage");
 
 function toggleMode() {
-  setMode((prev) => (prev === "simple" ? "advanced" : "simple"));
+  setMode((prev) => {
+    if (prev === "simple") return "advanced";
+    if (prev === "advanced") return "manage";
+    return "simple";
+  });
 }
 
 // Theme: persisted in localStorage, default "dark"
@@ -35,6 +41,7 @@ export const appStore = {
   mode,
   setMode,
   isAdvanced,
+  isManage,
   toggleMode,
   theme,
   toggleTheme,

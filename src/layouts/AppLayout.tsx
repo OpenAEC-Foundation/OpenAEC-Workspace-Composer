@@ -8,7 +8,7 @@ import { packagesStore } from "../stores/packages.store";
 import { gpuStore } from "../stores/gpu.store";
 import { appStore } from "../stores/app.store";
 import { PageTransition } from "../components/PageTransition";
-import { TbOutlineHome, TbOutlineBolt, TbOutlinePackage, TbOutlineFolder, TbOutlineSettings, TbOutlineLink, TbOutlineShield, TbOutlineCpu, TbOutlineFileText, TbOutlineCloudDownload, TbOutlineServer, TbOutlineRefresh, TbOutlineInfoCircle, TbOutlineSun, TbOutlineMoon, TbOutlineMessage } from "solid-icons/tb";
+import { TbOutlineHome, TbOutlineBolt, TbOutlinePackage, TbOutlineFolder, TbOutlineSettings, TbOutlineLink, TbOutlineShield, TbOutlineCpu, TbOutlineFileText, TbOutlineCloudDownload, TbOutlineServer, TbOutlineRefresh, TbOutlineInfoCircle, TbOutlineSun, TbOutlineMoon, TbOutlineMessage, TbOutlineBulb, TbOutlineClock, TbOutlineShare } from "solid-icons/tb";
 import openaecSymbol from "../assets/openaec-symbol.svg";
 
 function NavIcon(props: { icon: string }) {
@@ -26,6 +26,12 @@ function NavIcon(props: { icon: string }) {
     "gpu-server": TbOutlineServer,
     sync: TbOutlineRefresh,
     about: TbOutlineInfoCircle,
+    "manage-overview": TbOutlineHome,
+    "manage-projects": TbOutlineFolder,
+    "manage-claude": TbOutlineFileText,
+    "manage-lessons": TbOutlineBulb,
+    "manage-sessions": TbOutlineClock,
+    "manage-integrations": TbOutlineShare,
   };
   const Icon = iconMap[props.icon];
   return Icon ? <Icon size={18} /> : null;
@@ -36,6 +42,7 @@ export function AppLayout(props: ParentProps) {
   const gpuConnected = createMemo(() => gpuStore.connected());
   const gpuSyncCount = createMemo(() => gpuStore.activeSyncCount());
   const advanced = createMemo(() => appStore.isAdvanced());
+  const manage = createMemo(() => appStore.isManage());
   const [feedbackOpen, setFeedbackOpen] = createSignal(false);
 
   return (
@@ -48,21 +55,27 @@ export function AppLayout(props: ParentProps) {
             <span class="sidebar-brand-name">Open<span>AEC</span></span>
           </div>
 
-          {/* Mode toggle */}
+          {/* Mode toggle — three-way */}
           <div style={{ padding: "0 var(--sp-3)", "margin-bottom": "var(--sp-2)" }}>
-            <button
-              class="mode-toggle"
-              onClick={() => appStore.toggleMode()}
-              title={advanced() ? "Switch to Simple mode" : "Switch to Advanced mode"}
-            >
-              <span class={`mode-toggle-option ${!advanced() ? "active" : ""}`}>Simple</span>
-              <span class={`mode-toggle-option ${advanced() ? "active" : ""}`}>Advanced</span>
-            </button>
+            <div class="mode-toggle">
+              <span
+                class={`mode-toggle-option ${appStore.mode() === "simple" ? "active" : ""}`}
+                onClick={() => appStore.setMode("simple")}
+              >Simple</span>
+              <span
+                class={`mode-toggle-option ${appStore.mode() === "advanced" ? "active" : ""}`}
+                onClick={() => appStore.setMode("advanced")}
+              >Advanced</span>
+              <span
+                class={`mode-toggle-option ${appStore.mode() === "manage" ? "active" : ""}`}
+                onClick={() => appStore.setMode("manage")}
+              >Manage</span>
+            </div>
           </div>
 
           <div class="sidebar-nav">
             {/* === SIMPLE MODE === */}
-            <Show when={!advanced()}>
+            <Show when={appStore.mode() === "simple"}>
               <div class="sidebar-nav-group">
                 <A href="/workspace" class="sidebar-nav-item" activeClass="active">
                   <NavIcon icon="workspace" />
@@ -177,6 +190,33 @@ export function AppLayout(props: ParentProps) {
                 <A href="/git" class="sidebar-nav-item" activeClass="active">
                   <NavIcon icon="workspace" />
                   <span>Git</span>
+                </A>
+              </div>
+            </Show>
+
+            {/* === MANAGE MODE === */}
+            <Show when={manage()}>
+              <div class="sidebar-nav-group">
+                <div class="sidebar-nav-group-title">Manage</div>
+                <A href="/manage" class="sidebar-nav-item" activeClass="active" end>
+                  <NavIcon icon="manage-overview" />
+                  <span>Overview</span>
+                </A>
+                <A href="/manage/projects" class="sidebar-nav-item" activeClass="active">
+                  <NavIcon icon="manage-projects" />
+                  <span>Projects</span>
+                </A>
+                <A href="/manage/lessons" class="sidebar-nav-item" activeClass="active">
+                  <NavIcon icon="manage-lessons" />
+                  <span>Lessons Learned</span>
+                </A>
+                <A href="/manage/sessions" class="sidebar-nav-item" activeClass="active">
+                  <NavIcon icon="manage-sessions" />
+                  <span>Sessions</span>
+                </A>
+                <A href="/manage/integrations" class="sidebar-nav-item" activeClass="active">
+                  <NavIcon icon="manage-integrations" />
+                  <span>Integrations</span>
                 </A>
               </div>
             </Show>
